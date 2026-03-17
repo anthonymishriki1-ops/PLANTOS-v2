@@ -13,6 +13,7 @@ function plantosBuildMenu_() {
     .addSeparator()
     .addItem('STOP (clear rebuild cursor)', 'plantosMenuStop')
     .addSeparator()
+    .addItem('Backfill Missing Plant UIDs', 'plantosMenuBackfillUids')
     .addItem('Diagnostics (sanity check)', 'plantosMenuDiagnostics')
     .addToUi();
 }
@@ -361,4 +362,49 @@ function onEdit(e) {
     // Silent fail — onEdit must not throw or it blocks user edits
     Logger.log('[PlantOS] onEdit auto-UID error: ' + (err && err.message ? err.message : String(err)));
   }
+}
+
+/* ===================== BACKFILL MISSING UIDs ===================== */
+
+function plantosMenuBackfillUids() {
+  const ui = SpreadsheetApp.getUi();
+  const result = plantosBackfillMissingUids_();
+  ui.alert('Backfill UIDs', result.message, ui.ButtonSet.OK);
+}
+
+function plantosBackfillMissingUids_() {
+  const { sh, values, headers, hmap } = plantosReadInventory_();
+  const H = PLANTOS_BACKEND_CFG.HEADERS;
+  const uidCol   = plantosCol_(hmap, H.UID);
+  const nickCol  = plantosCol_(hmap, H.NICKNAME);
+  const genusCol = plantosCol_(hmap, H.GENUS);
+  const taxonCol = plantosCol_(hmap, H.TAXON);
+  if (uidCol < 0) return { filled: 0, message: 'Plant UID column not found.' };
+
+  // Find current max UID
+  let max = 0;
+  for (let r = 1; r < values.length; r++) {
+    const n = Number(plantosSafeStr_(values[r][uidCol]).trim());
+    if (!isNaN(n) && n > 0) max = Math.max(max, n);
+  }
+
+  let filled = 0;
+  for (let r = 1; r < values.length; r++) {
+    const existingUid = plantosSafeStr_(values[r][uidCol]).trim();
+    if (existingUid) continue;
+
+    const nick  = nickCol  >= 0 ? plantosSafeStr_(values[r][nickCol]).trim()  : '';
+    const genus = genusCol >= 0 ? plantosSafeStr_(values[r][genusCol]).trim() : '';
+    const taxon = taxonCol >= 0 ? plantosSafeStr_(values[r][taxonCol]).trim() : '';
+    if (!nick && !genus && !taxon) continue;
+
+    max++;
+    sh.getRange(r + 1, uidCol + 1).setValue(String(max));
+    filled++;
+  }
+
+  const message = filled > 0
+    ? 'Assigned UIDs to ' + filled + ' plant(s) that were missing one.'
+    : 'All plants already have UIDs. Nothing to backfill.';
+  return { filled, message };
 }

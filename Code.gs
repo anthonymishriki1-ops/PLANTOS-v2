@@ -242,7 +242,7 @@ function plantosBackfillQrScriptLinks_() {
     const qrScriptUrl = plantosBuildQrScriptUrl_(plantPageUrl);
     if (plantPageUrlCol >= 0 && !plantosSafeStr_(row[plantPageUrlCol]).trim()) { row[plantPageUrlCol] = plantPageUrl; updated++; }
     if (qrScriptUrlCol >= 0 && !plantosSafeStr_(row[qrScriptUrlCol]).trim()) { row[qrScriptUrlCol] = qrScriptUrl; updated++; }
-    if (qrImageCol >= 0 && !plantosSafeStr_(row[qrImageCol]).trim()) {
+    if (qrImageCol >= 0 && qrScriptUrlCol >= 0 && !plantosSafeStr_(row[qrImageCol]).trim()) {
       const colLetter = plantosColToA1_(qrScriptUrlCol + 1);
       row[qrImageCol] = `=IF(LEN(${colLetter}${i + 2})=0,"",IMAGE(${colLetter}${i + 2}))`;
       updated++;
@@ -488,17 +488,31 @@ function plantosRebuildDeploymentAssets_(opts) {
     const qrFileIdCol = plantosCol_(hmap, H.QR_FILE_ID), qrUrlCol = plantosCol_(hmap, H.QR_URL);
     const plantPageUrlCol = plantosCol_(hmap, H.PLANT_PAGE_URL), qrScriptUrlCol = plantosCol_(hmap, H.QR_SCRIPT_URL), qrImageCol = plantosCol_(hmap, H.QR_IMAGE);
     const totalPlants = lastRow - 1;
+    // Pre-compute next UID so we can assign UIDs to rows that lack one
+    let nextUidNum = 0;
+    try {
+      const allVals = sh.getRange(2, uidCol + 1, lastRow - 1, 1).getValues();
+      for (let k = 0; k < allVals.length; k++) {
+        const n = Number(plantosSafeStr_(allVals[k][0]).trim());
+        if (!isNaN(n) && n > 0) nextUidNum = Math.max(nextUidNum, n);
+      }
+    } catch (e) {}
+    if (nextUidNum <= 0) nextUidNum = Date.now() - 1;
     for (let i = 0; i < block.length; i++) {
       const row = block[i];
-      const uid = plantosSafeStr_(row[uidCol]).trim();
-      if (!uid) continue;
+      let uid = plantosSafeStr_(row[uidCol]).trim();
+      if (!uid) {
+        nextUidNum++;
+        uid = String(nextUidNum);
+        row[uidCol] = uid;
+      }
       Logger.log('[PlantOS] Rebuilding ' + (start + i - 1) + '/' + totalPlants + ': ' + uid);
       const primary = plantosComputePrimaryLabel_(hmap, row);
       const plantPageUrl = plantosBuildPlantPageUrl_(baseUrl, uid);
       if (plantPageUrlCol >= 0 && !plantosSafeStr_(row[plantPageUrlCol]).trim()) row[plantPageUrlCol] = plantPageUrl;
       const qrScriptUrl = plantosBuildQrScriptUrl_(plantPageUrl);
       if (qrScriptUrlCol >= 0 && !plantosSafeStr_(row[qrScriptUrlCol]).trim()) row[qrScriptUrlCol] = qrScriptUrl;
-      if (qrImageCol >= 0 && !plantosSafeStr_(row[qrImageCol]).trim()) {
+      if (qrImageCol >= 0 && qrScriptUrlCol >= 0 && !plantosSafeStr_(row[qrImageCol]).trim()) {
         const colLetter = plantosColToA1_(qrScriptUrlCol + 1);
         row[qrImageCol] = `=IF(LEN(${colLetter}${start + i})=0,"",IMAGE(${colLetter}${start + i}))`;
       }
@@ -534,7 +548,7 @@ function plantosRebuildDeploymentAssets_(opts) {
     plantosSetSetting_(PLANTOS_BACKEND_CFG.SETTINGS_KEYS.REBUILD_CURSOR, '');
     return { ok: true, message: `Rebuilt rows ${start}–${end}.\nAll done ✅` };
   } catch (e) {
-    return { ok: false, message: 'Rebuild failed: ' + (e && e.message ? e.message : e) };
+    return { ok: false, message: 'Rebuild failed: ' + (e && e.message ? e.message : e) + (e && e.stack ? '\n\nStack: ' + e.stack : '') };
   } finally {
     lock.releaseLock();
   }

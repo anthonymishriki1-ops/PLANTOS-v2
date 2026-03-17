@@ -323,3 +323,42 @@ function plantosWipeDeploymentFields_() {
     .forEach(ci => sh.getRange(2, ci + 1, lastRow - 1, 1).clearContent());
   plantosSetSetting_(PLANTOS_BACKEND_CFG.SETTINGS_KEYS.REBUILD_CURSOR, '');
 }
+
+/* ===================== AUTO-ASSIGN UID ON SHEET EDIT ===================== */
+
+function onEdit(e) {
+  try {
+    if (!e || !e.range) return;
+    const sh = e.range.getSheet();
+    if (sh.getName() !== PLANTOS_BACKEND_CFG.INVENTORY_SHEET) return;
+
+    const editedRow = e.range.getRow();
+    if (editedRow < 2) return; // ignore header row
+
+    const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0] || [];
+    const hmap = plantosHeaderMap_(headers);
+    const H = PLANTOS_BACKEND_CFG.HEADERS;
+    const uidCol = plantosCol_(hmap, H.UID);
+    const nickCol = plantosCol_(hmap, H.NICKNAME);
+    const genusCol = plantosCol_(hmap, H.GENUS);
+    const taxonCol = plantosCol_(hmap, H.TAXON);
+    if (uidCol < 0) return;
+
+    // Check if this row already has a UID
+    const existingUid = String(sh.getRange(editedRow, uidCol + 1).getValue() || '').trim();
+    if (existingUid) return;
+
+    // Check if the row now has a nickname, genus, or taxon
+    const nick  = nickCol  >= 0 ? String(sh.getRange(editedRow, nickCol + 1).getValue() || '').trim()  : '';
+    const genus = genusCol >= 0 ? String(sh.getRange(editedRow, genusCol + 1).getValue() || '').trim() : '';
+    const taxon = taxonCol >= 0 ? String(sh.getRange(editedRow, taxonCol + 1).getValue() || '').trim() : '';
+    if (!nick && !genus && !taxon) return;
+
+    // Auto-assign the next UID
+    const uid = plantosGenerateNextUid_();
+    sh.getRange(editedRow, uidCol + 1).setValue(uid);
+  } catch (err) {
+    // Silent fail — onEdit must not throw or it blocks user edits
+    Logger.log('[PlantOS] onEdit auto-UID error: ' + (err && err.message ? err.message : String(err)));
+  }
+}

@@ -2165,6 +2165,58 @@ function plantosCleanBlankRows_() {
   return { deleted: toDelete.length, kept };
 }
 
+/* ===================== onEdit — auto-generate UID for new rows ===================== */
+
+function onEdit(e) {
+  try {
+    if (!e || !e.range) return;
+    const sh = e.range.getSheet();
+    if (sh.getName() !== PLANTOS_BACKEND_CFG.INVENTORY_SHEET) return;
+    const row = e.range.getRow();
+    if (row < 2) return; // header row
+
+    const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+    const hmap = plantosHeaderMap_(headers);
+    const H = PLANTOS_BACKEND_CFG.HEADERS;
+    const uidCol   = plantosCol_(hmap, H.UID);
+    const nickCol  = plantosCol_(hmap, H.NICKNAME);
+    const genusCol = plantosCol_(hmap, H.GENUS);
+    const taxonCol = plantosCol_(hmap, H.TAXON);
+    if (uidCol < 0) return;
+
+    const rowData = sh.getRange(row, 1, 1, headers.length).getValues()[0];
+    const uid   = plantosSafeStr_(uidCol >= 0 ? rowData[uidCol] : '').trim();
+    const nick  = plantosSafeStr_(nickCol >= 0 ? rowData[nickCol] : '').trim();
+    const genus = plantosSafeStr_(genusCol >= 0 ? rowData[genusCol] : '').trim();
+    const taxon = plantosSafeStr_(taxonCol >= 0 ? rowData[taxonCol] : '').trim();
+
+    // Only act if the row has plant data but no UID yet
+    if (uid) return;
+    if (!nick && !genus && !taxon) return;
+
+    const newUid = plantosGenerateNextUid_();
+    sh.getRange(row, uidCol + 1).setValue(newUid);
+
+    // Also backfill script links for this row
+    try {
+      const baseUrl = plantosGetSetting_(PLANTOS_BACKEND_CFG.SETTINGS_KEYS.ACTIVE_WEBAPP_URL);
+      if (baseUrl && plantosValidateWebAppUrl_(baseUrl).ok) {
+        const plantPageUrlCol = plantosCol_(hmap, H.PLANT_PAGE_URL);
+        const qrScriptUrlCol  = plantosCol_(hmap, H.QR_SCRIPT_URL);
+        const qrImageCol      = plantosCol_(hmap, H.QR_IMAGE);
+        const plantPageUrl = plantosBuildPlantPageUrl_(baseUrl, newUid);
+        const qrScriptUrl  = plantosBuildQrScriptUrl_(plantPageUrl);
+        if (plantPageUrlCol >= 0) sh.getRange(row, plantPageUrlCol + 1).setValue(plantPageUrl);
+        if (qrScriptUrlCol >= 0) sh.getRange(row, qrScriptUrlCol + 1).setValue(qrScriptUrl);
+        if (qrImageCol >= 0 && qrScriptUrlCol >= 0) {
+          const colLetter = plantosColToA1_(qrScriptUrlCol + 1);
+          sh.getRange(row, qrImageCol + 1).setFormula(`=IF(LEN(${colLetter}${row})=0,"",IMAGE(${colLetter}${row}))`);
+        }
+      }
+    } catch (linkErr) { /* script links are non-critical */ }
+  } catch (err) { /* onEdit must not throw */ }
+}
+
 /* ===================== onOpen ===================== */
 
 function onOpen() {

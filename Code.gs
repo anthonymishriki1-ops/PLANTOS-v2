@@ -1574,7 +1574,6 @@ function plantosRowToPlant_(hmap, row) {
     growingMethod: plantosSafeStr_(plantosGetByHeader_(hmap, row, H.GROWING_METHOD)).trim() || 'substrate',
     semiHydroFertMode: plantosSafeStr_(plantosGetByHeader_(hmap, row, H.SEMIHYDRO_FERT_MODE)).trim() || 'always',
     flushEveryN: parseInt(plantosSafeStr_(plantosGetByHeader_(hmap, row, H.FLUSH_EVERY_N)).trim() || '6', 10) || 6,
-    medium:       medium      || '',
 
     birthday:  birthday ? plantosFmtDate_(plantosAsDate_(birthday)) : '',
     humanPlantId: plantosGetByHeader_(hmap, row, H.PLANT_ID) || '',

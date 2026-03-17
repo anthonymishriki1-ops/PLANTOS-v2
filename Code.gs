@@ -87,6 +87,7 @@ function plantosBuildMenu_() {
     .addItem('Rebuild Deployments (links/folders/docs/QR)', 'plantosMenuRebuildStart')
     .addItem('Continue Rebuild (resume)', 'plantosMenuRebuildContinue')
     .addItem('Fix QR Columns / Links', 'plantosMenuFixQrColumnsLinks')
+    .addItem('Backfill Missing UIDs', 'plantosMenuBackfillUids')
     .addSeparator()
     .addItem('STOP (clear rebuild cursor)', 'plantosMenuStop')
     .addSeparator()
@@ -149,7 +150,15 @@ function plantosSetSetting_(key, value) {
 
 /* ===================== SHEET HELPERS ===================== */
 
-function plantosGetSS_()              { return SpreadsheetApp.getActiveSpreadsheet(); }
+function plantosGetSS_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (ss) return ss;
+  // Fallback for web app context where getActiveSpreadsheet() returns null:
+  // Use the script's container spreadsheet via getActive()
+  const active = SpreadsheetApp.getActive();
+  if (active) return active;
+  throw new Error('Cannot access spreadsheet. If running as a web app, make sure the script is container-bound to the spreadsheet (Extensions > Apps Script).');
+}
 function plantosGetSheet_(name)       { const sh = plantosGetSS_().getSheetByName(name); if (!sh) throw new Error('Missing sheet: ' + name); return sh; }
 function plantosGetInventorySheet_()  { return plantosGetSheet_(PLANTOS_BACKEND_CFG.INVENTORY_SHEET); }
 
@@ -788,7 +797,7 @@ function plantosGetPlantsByLocationLite(location) {
   const t0 = Date.now();
   const locLower = plantosSafeStr_(location).trim().toLowerCase();
   const inv = plantosReadInventory_();
-  const values = inv.values, hmap = inv.hmap;
+  const sh = inv.sh, values = inv.values, hmap = inv.hmap;
   const H = PLANTOS_BACKEND_CFG.HEADERS;
   const uidCol    = plantosCol_(hmap, H.UID);
   const locCol    = plantosCol_(hmap, H.LOCATION);
@@ -810,6 +819,24 @@ function plantosGetPlantsByLocationLite(location) {
   const cultivarCol  = plantosCol_(hmap, H.CULTIVAR);
   const pidCol   = plantosCol_(hmap, H.PLANT_ID);
   const ppCol    = plantosCol_(hmap, H.PLANT_PAGE_URL);
+
+  // Auto-backfill UIDs for rows missing them
+  let maxUid = 0;
+  for (let r = 1; r < values.length; r++) {
+    const n = Number(plantosSafeStr_(values[r][uidCol]).trim());
+    if (!isNaN(n) && n > 0) maxUid = Math.max(maxUid, n);
+  }
+  if (maxUid <= 0) maxUid = Date.now() - 1;
+  for (let r = 1; r < values.length; r++) {
+    if (plantosSafeStr_(values[r][uidCol]).trim()) continue;
+    const nick  = nickCol  >= 0 ? plantosSafeStr_(values[r][nickCol]).trim()  : '';
+    const genus = genusCol >= 0 ? plantosSafeStr_(values[r][genusCol]).trim() : '';
+    const taxon = taxonCol >= 0 ? plantosSafeStr_(values[r][taxonCol]).trim() : '';
+    if (!nick && !genus && !taxon) continue;
+    maxUid++;
+    values[r][uidCol] = String(maxUid);
+    try { sh.getRange(r + 1, uidCol + 1).setValue(String(maxUid)); } catch (e) {}
+  }
 
   const out = [], errors = [];
   let matched = 0, skipped = 0;
@@ -922,7 +949,7 @@ function plantosGetAllPlants() {
 function plantosGetAllPlantsLite() {
   const t0 = Date.now();
   const inv = plantosReadInventory_();
-  const values = inv.values, hmap = inv.hmap;
+  const sh = inv.sh, values = inv.values, hmap = inv.hmap;
   const H = PLANTOS_BACKEND_CFG.HEADERS;
   const uidCol = plantosCol_(hmap, H.UID);
   if (uidCol < 0) {
@@ -948,6 +975,28 @@ function plantosGetAllPlantsLite() {
   const cultivarCol = plantosCol_(hmap, H.CULTIVAR);
   const pidCol = plantosCol_(hmap, H.PLANT_ID);
   const ppCol = plantosCol_(hmap, H.PLANT_PAGE_URL);
+
+  // Auto-backfill UIDs for rows that have plant data but no UID
+  let maxUid = 0;
+  for (let r = 1; r < values.length; r++) {
+    const n = Number(plantosSafeStr_(values[r][uidCol]).trim());
+    if (!isNaN(n) && n > 0) maxUid = Math.max(maxUid, n);
+  }
+  if (maxUid <= 0) maxUid = Date.now() - 1;
+  let backfilled = 0;
+  for (let r = 1; r < values.length; r++) {
+    const uid = plantosSafeStr_(values[r][uidCol]).trim();
+    if (uid) continue;
+    const nick  = nickCol  >= 0 ? plantosSafeStr_(values[r][nickCol]).trim()  : '';
+    const genus = genusCol >= 0 ? plantosSafeStr_(values[r][genusCol]).trim() : '';
+    const taxon = taxonCol >= 0 ? plantosSafeStr_(values[r][taxonCol]).trim() : '';
+    if (!nick && !genus && !taxon) continue; // truly empty row
+    maxUid++;
+    values[r][uidCol] = String(maxUid);
+    try { sh.getRange(r + 1, uidCol + 1).setValue(String(maxUid)); } catch (e) { /* best effort */ }
+    backfilled++;
+  }
+  if (backfilled > 0) Logger.log('[PlantOS] Auto-backfilled ' + backfilled + ' missing UIDs');
 
   const out = [], errors = [];
   let skipped = 0;
@@ -1143,7 +1192,46 @@ function plantosCreatePlant(payload) {
   setIf(H.POT_SHAPE,        payload.potShape || '');       // FIX #12
   setIfMulti(payload.waterEveryDays || payload.everyDays || '', H.WATER_EVERY_DAYS, H.WATER_EVERY_DAYS_ALT); // FIX #14
   setIf(H.FERT_EVERY_DAYS,  payload.fertEveryDays || payload.fertilizeEveryDays || '');
+
+  // Auto-generate script links (plant page URL, QR)
+  try {
+    const baseUrl = plantosGetSetting_(PLANTOS_BACKEND_CFG.SETTINGS_KEYS.ACTIVE_WEBAPP_URL);
+    if (baseUrl && plantosValidateWebAppUrl_(baseUrl).ok) {
+      const plantPageUrl = plantosBuildPlantPageUrl_(baseUrl, uid);
+      const qrScriptUrl  = plantosBuildQrScriptUrl_(plantPageUrl);
+      const ppCol = plantosCol_(hmap, H.PLANT_PAGE_URL);
+      const qsCol = plantosCol_(hmap, H.QR_SCRIPT_URL);
+      if (ppCol >= 0) row[ppCol] = plantPageUrl;
+      if (qsCol >= 0) row[qsCol] = qrScriptUrl;
+    }
+  } catch (e) { /* non-critical */ }
+
+  // Auto-create Drive folder for this plant
+  try {
+    const folderIdCol  = plantosCol_(hmap, H.FOLDER_ID);
+    const folderUrlCol = plantosCol_(hmap, H.FOLDER_URL);
+    if (folderIdCol >= 0) {
+      const plantsRoot = plantosGetPlantsRoot_();
+      const plantFolder = plantosResolveOrCreatePlantFolder_(plantsRoot, uid);
+      row[folderIdCol] = plantFolder.getId();
+      if (folderUrlCol >= 0) row[folderUrlCol] = plantFolder.getUrl();
+      plantosEnsureSubfolder_(plantFolder, PLANTOS_BACKEND_CFG.PHOTOS_SUBFOLDER);
+    }
+  } catch (e) { Logger.log('[PlantOS] createPlant folder creation skipped: ' + (e.message || e)); }
+
   sh.appendRow(row);
+
+  // Set QR Image formula after row exists (needs row number)
+  try {
+    const qrImageCol     = plantosCol_(hmap, H.QR_IMAGE);
+    const qrScriptUrlCol = plantosCol_(hmap, H.QR_SCRIPT_URL);
+    if (qrImageCol >= 0 && qrScriptUrlCol >= 0) {
+      const newRowNum = sh.getLastRow();
+      const colLetter = plantosColToA1_(qrScriptUrlCol + 1);
+      sh.getRange(newRowNum, qrImageCol + 1).setFormula(`=IF(LEN(${colLetter}${newRowNum})=0,"",IMAGE(${colLetter}${newRowNum}))`);
+    }
+  } catch (e) { /* non-critical */ }
+
   return { ok: true, uid };
 }
 
@@ -2179,6 +2267,95 @@ function plantosCleanBlankRows_() {
   return { deleted: toDelete.length, kept };
 }
 
+/* ===================== Backfill UIDs for all rows missing them ===================== */
+
+function plantosBackfillMissingUids() {
+  const { sh, values, hmap } = plantosReadInventory_();
+  const H = PLANTOS_BACKEND_CFG.HEADERS;
+  const uidCol   = plantosCol_(hmap, H.UID);
+  const nickCol  = plantosCol_(hmap, H.NICKNAME);
+  const genusCol = plantosCol_(hmap, H.GENUS);
+  const taxonCol = plantosCol_(hmap, H.TAXON);
+  if (uidCol < 0) throw new Error('Missing Plant UID column');
+
+  // Find current max UID
+  let max = 0;
+  for (let r = 1; r < values.length; r++) {
+    const n = Number(plantosSafeStr_(values[r][uidCol]).trim());
+    if (!isNaN(n) && n > 0) max = Math.max(max, n);
+  }
+  if (max <= 0) max = Date.now() - 1;
+
+  let filled = 0;
+  const baseUrl = plantosGetSetting_(PLANTOS_BACKEND_CFG.SETTINGS_KEYS.ACTIVE_WEBAPP_URL);
+  const hasUrl = baseUrl && plantosValidateWebAppUrl_(baseUrl).ok;
+  const plantPageUrlCol = plantosCol_(hmap, H.PLANT_PAGE_URL);
+  const qrScriptUrlCol  = plantosCol_(hmap, H.QR_SCRIPT_URL);
+  const qrImageCol      = plantosCol_(hmap, H.QR_IMAGE);
+  const folderIdCol  = plantosCol_(hmap, H.FOLDER_ID);
+  const folderUrlCol = plantosCol_(hmap, H.FOLDER_URL);
+
+  // Lazily resolve Drive folder root (only if we need it)
+  let plantsRoot = null;
+  function getPlantsRoot() {
+    if (plantsRoot) return plantsRoot;
+    try {
+      plantsRoot = plantosGetPlantsRoot_();
+    } catch (e) { plantsRoot = null; }
+    return plantsRoot;
+  }
+
+  for (let r = 1; r < values.length; r++) {
+    const uid = plantosSafeStr_(values[r][uidCol]).trim();
+    if (uid) continue; // already has UID
+
+    const nick  = nickCol  >= 0 ? plantosSafeStr_(values[r][nickCol]).trim()  : '';
+    const genus = genusCol >= 0 ? plantosSafeStr_(values[r][genusCol]).trim() : '';
+    const taxon = taxonCol >= 0 ? plantosSafeStr_(values[r][taxonCol]).trim() : '';
+    if (!nick && !genus && !taxon) continue; // truly empty row
+
+    max++;
+    const newUid = String(max);
+    const rowNum = r + 1;
+    sh.getRange(rowNum, uidCol + 1).setValue(newUid);
+    filled++;
+
+    // Backfill script links
+    try {
+      if (hasUrl) {
+        const plantPageUrl = plantosBuildPlantPageUrl_(baseUrl, newUid);
+        const qrScriptUrl  = plantosBuildQrScriptUrl_(plantPageUrl);
+        if (plantPageUrlCol >= 0) sh.getRange(rowNum, plantPageUrlCol + 1).setValue(plantPageUrl);
+        if (qrScriptUrlCol >= 0) sh.getRange(rowNum, qrScriptUrlCol + 1).setValue(qrScriptUrl);
+        if (qrImageCol >= 0 && qrScriptUrlCol >= 0) {
+          const colLetter = plantosColToA1_(qrScriptUrlCol + 1);
+          sh.getRange(rowNum, qrImageCol + 1).setFormula(`=IF(LEN(${colLetter}${rowNum})=0,"",IMAGE(${colLetter}${rowNum}))`);
+        }
+      }
+    } catch (e) { /* non-critical */ }
+
+    // Create Drive folder for this plant
+    try {
+      if (folderIdCol >= 0) {
+        const root = getPlantsRoot();
+        if (root) {
+          const plantFolder = plantosResolveOrCreatePlantFolder_(root, newUid);
+          sh.getRange(rowNum, folderIdCol + 1).setValue(plantFolder.getId());
+          if (folderUrlCol >= 0) sh.getRange(rowNum, folderUrlCol + 1).setValue(plantFolder.getUrl());
+          plantosEnsureSubfolder_(plantFolder, PLANTOS_BACKEND_CFG.PHOTOS_SUBFOLDER);
+        }
+      }
+    } catch (e) { Logger.log('[PlantOS] backfill folder creation skipped for UID ' + newUid + ': ' + (e.message || e)); }
+  }
+
+  return { ok: true, filled, message: filled > 0 ? 'Assigned UIDs to ' + filled + ' plant(s) (with Drive folders).' : 'All plants already have UIDs.' };
+}
+
+function plantosMenuBackfillUids() {
+  const result = plantosBackfillMissingUids();
+  SpreadsheetApp.getUi().alert('Backfill UIDs', result.message, SpreadsheetApp.getUi().ButtonSet.OK);
+}
+
 /* ===================== onEdit — auto-generate UID for new rows ===================== */
 
 function onEdit(e) {
@@ -2228,6 +2405,19 @@ function onEdit(e) {
         }
       }
     } catch (linkErr) { /* script links are non-critical */ }
+
+    // Create Drive folder for this plant
+    try {
+      const folderIdCol  = plantosCol_(hmap, H.FOLDER_ID);
+      const folderUrlCol = plantosCol_(hmap, H.FOLDER_URL);
+      if (folderIdCol >= 0) {
+        const plantsRoot = plantosGetPlantsRoot_();
+        const plantFolder = plantosResolveOrCreatePlantFolder_(plantsRoot, newUid);
+        sh.getRange(row, folderIdCol + 1).setValue(plantFolder.getId());
+        if (folderUrlCol >= 0) sh.getRange(row, folderUrlCol + 1).setValue(plantFolder.getUrl());
+        plantosEnsureSubfolder_(plantFolder, PLANTOS_BACKEND_CFG.PHOTOS_SUBFOLDER);
+      }
+    } catch (folderErr) { /* Drive folder creation is non-critical in onEdit */ }
   } catch (err) { /* onEdit must not throw */ }
 }
 
@@ -2244,6 +2434,7 @@ function onOpen() {
     .addItem('Continue Rebuild (resume)',               'plantosMenuRebuildContinue')
     .addSeparator()
     .addItem('🧹 Delete blank/garbage rows',           'plantosMenuCleanBlankRows')
+    .addItem('🔢 Backfill Missing Plant UIDs',          'plantosMenuBackfillUids')
     .addItem('⚙ Add Missing Columns (Pot Material etc)', 'plantosEnsureOptionalColumns')
     .addSeparator()
     .addItem('Generate QR Label Sheet',                'plantosMenuGenerateQrLabels')
@@ -2532,8 +2723,9 @@ function carlLoadMessages(uid) {
   try {
     const key = 'carl_msgs_' + plantosSafeStr_(uid).trim();
     const val = PropertiesService.getUserProperties().getProperty(key);
-    return val ? JSON.parse(val) : [];
-  } catch(e) { return []; }
+    const messages = val ? JSON.parse(val) : [];
+    return { ok: true, messages: Array.isArray(messages) ? messages : [] };
+  } catch(e) { return { ok: true, messages: [] }; }
 }
 
 function carlSaveMessages(uid, messages) {

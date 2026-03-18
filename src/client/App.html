@@ -8477,6 +8477,7 @@ function MyPlantsScreen({ openTab, prefill }) {
                             selectedLocs.length,
                             " locations selected"))),
                     hasSelection && !loading && plants.length > 0 && (React.createElement("div", { className: "mb-3" },
+                        React.createElement("div", { style: Object.assign({}, pxS, { fontSize: '11px', color: theme.txtS, marginBottom: 4 }) }, plants.length + ' plants loaded · ' + filteredPlants.length + ' showing'),
                         React.createElement("input", { value: plantFilter, onChange: e => setPlantFilter(e.target.value), placeholder: "Filter plants...", className: "w-full border-4  p-2 input-depth", style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', color: theme.txtP, borderColor: theme.cardBorder, background: theme.cardBg }) }))),
                     loading && React.createElement("div", { className: "space-y-2" },
                         Array.from({ length: 6 }).map(function(_, i) {

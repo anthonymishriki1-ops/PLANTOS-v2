@@ -660,6 +660,17 @@ const HAS_GAS = !!(window.google && google.script && google.script.run);
 const DEMO_MODE = !HAS_GAS;
 const pxS = { fontFamily: "'Pixelify Sans', cursive" };
 const px8 = { fontFamily: "'Press Start 2P', cursive" };
+const emojiFont = "'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
+function emojiSpan(text) {
+    if (typeof text !== 'string') return text;
+    var parts = text.split(/(\p{Emoji_Presentation}\uFE0F?|\p{Extended_Pictographic}\uFE0F?)/u);
+    if (parts.length <= 1) return text;
+    return parts.map(function(p, i) {
+        if (/\p{Emoji_Presentation}|\p{Extended_Pictographic}/u.test(p))
+            return React.createElement('span', { key: i, style: { fontFamily: emojiFont } }, p);
+        return p;
+    });
+}
 
 
 function normStr(s) { return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
@@ -5286,18 +5297,7 @@ function PlantButton({ children, variant = 'primary', onClick, disabled = false,
     const theme = useTheme();
     const cfg = variant === 'primary' ? theme.btnP : variant === 'secondary' ? theme.btnS : theme.btnG;
     const shadow = cfg.shadow || theme.cardBorder;
-    var processed = children;
-    if (typeof children === 'string') {
-        var parts = children.split(/(\p{Emoji_Presentation}\uFE0F?|\p{Extended_Pictographic}\uFE0F?)/u);
-        if (parts.length > 1) {
-            processed = parts.map(function(p, i) {
-                if (/\p{Emoji_Presentation}|\p{Extended_Pictographic}/u.test(p)) {
-                    return React.createElement('span', { key: i, style: { fontFamily: "'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif" } }, p);
-                }
-                return p;
-            });
-        }
-    }
+    var processed = emojiSpan(children);
     return React.createElement("button", {
         type: "button", onClick: onClick, disabled: disabled,
         className: `btn-press hover-lift ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} ${className}`,
@@ -6174,8 +6174,8 @@ function WateringScreen() {
                 metaLine && (React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '12px', color: '#5A3818', fontWeight: 800 }) }, metaLine))),
             React.createElement("div", { className: "flex items-center gap-2 shrink-0" },
                 tab === 'both' ? (React.createElement("div", { className: "flex flex-col items-end leading-tight" },
-                    React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '12px', fontWeight: 900, color: '#1A2A08' }) }, "\uD83D\uDCA7 " + (p.waterDue || '\u2014')),
-                    React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '12px', fontWeight: 900, color: 'var(--c-soon)' }) }, "\uD83C\uDF3E " + (p.fertDue || '\u2014'))))
+                    React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '12px', fontWeight: 900, color: '#1A2A08' }) }, emojiSpan("\uD83D\uDCA7 " + (p.waterDue || '\u2014'))),
+                    React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '12px', fontWeight: 900, color: 'var(--c-soon)' }) }, emojiSpan("\uD83C\uDF3E " + (p.fertDue || '\u2014')))))
                 : (!isFine && React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '12px', fontWeight: 900, color: isNow ? 'var(--c-urgent)' : '#C87820' }) }, p.due || '\u2014')),
                 React.createElement("input", { type: "checkbox", className: "w-5 h-5", checked: checked, onChange: () => toggle(uid), onClick: (e) => e.stopPropagation(), title: "Select" }))));
     }
@@ -7620,7 +7620,7 @@ function AddScreen() {
                     React.createElement("span", { style: { marginLeft: 6, opacity: 0.6 } }, "\u2014 links siblings in family tree"))))),
             React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 8, margin: '4px 0 8px' } },
                 React.createElement("div", { style: { height: 2, flex: 1, background: theme.sep, opacity: 0.4 } }),
-                React.createElement("span", { style: Object.assign({}, pxS, { fontSize: '11px', fontWeight: 900, color: theme.txtS, letterSpacing: '0.08em', whiteSpace: 'nowrap' }) }, "\uD83D\uDCA7 WATERING & FERTILIZING"),
+                React.createElement("span", { style: Object.assign({}, pxS, { fontSize: '11px', fontWeight: 900, color: theme.txtS, letterSpacing: '0.08em', whiteSpace: 'nowrap' }) }, emojiSpan("\uD83D\uDCA7 WATERING & FERTILIZING")),
                 React.createElement("div", { style: { height: 2, flex: 1, background: theme.sep, opacity: 0.4 } })
             ),
             React.createElement("div", { style: { padding: '8px 10px', background: 'rgba(0,0,0,0.07)', border: '2px solid ' + theme.rowBorder, marginBottom: 10 } },
@@ -8207,7 +8207,7 @@ function MyPlantsScreen({ openTab, prefill }) {
         setAddingLoc(false);
     }
     function TabBar() {
-        return (React.createElement("div", { className: "plant-tab-bar", style: { borderBottomColor: theme.cardBorder, marginBottom: 14 } }, [['plants', '\uD83C\uDF3F Plants'], ['props', '\uD83C\uDF31 Props'], ['phylo', '\uD83E\uddEC Phylo']].map(([id, label]) => (React.createElement("button", { key: id, type: "button", onClick: () => setActiveTab(id), className: "plant-tab" + (activeTab === id ? " active" : ""), style: { color: activeTab === id ? theme.btnP.bg : theme.txtS, fontSize: isSmall ? '11px' : '13px' } }, label)))));
+        return (React.createElement("div", { className: "plant-tab-bar", style: { borderBottomColor: theme.cardBorder, marginBottom: 14 } }, [['plants', '\uD83C\uDF3F Plants'], ['props', '\uD83C\uDF31 Props'], ['phylo', '\uD83E\uddEC Phylo']].map(([id, label]) => (React.createElement("button", { key: id, type: "button", onClick: () => setActiveTab(id), className: "plant-tab" + (activeTab === id ? " active" : ""), style: { color: activeTab === id ? theme.btnP.bg : theme.txtS, fontSize: isSmall ? '11px' : '13px' } }, emojiSpan(label))))));
     }
     const locModalEl = locModal && React.createElement('div', {
         style: {
@@ -8221,10 +8221,10 @@ function MyPlantsScreen({ openTab, prefill }) {
         locCompassOpen && React.createElement('div', {
             style: { position: 'fixed', inset: 0, zIndex: 9999, background: '#030803', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: 24 }
         },
-            React.createElement('div', { style: { fontFamily:"'Press Start 2P',monospace", fontSize: 11, color: '#8AC868', letterSpacing: '0.1em' } }, '🧭 POINT YOUR PHONE'),
+            React.createElement('div', { style: { fontFamily:"'Press Start 2P',monospace", fontSize: 11, color: '#8AC868', letterSpacing: '0.1em' } }, emojiSpan('🧭 POINT YOUR PHONE')),
             React.createElement('div', { style: { fontFamily:"'Pixelify Sans',sans-serif", fontSize: 13, color: '#5A7A48', textAlign: 'center', maxWidth: 260, lineHeight: 1.5 } }, 'Hold flat — point top edge toward your wall or fence'),
             React.createElement(CompassRoseSVG, { heading: locLiveHeading, snapped: locSnapped, isSouthern: locIsSouthern, size: 220 }),
-            locSnapped && React.createElement('div', { style: { fontFamily:"'Pixelify Sans',sans-serif", fontSize: 14, color: sunColorLoc(estSun(locSnapped, locObstruction, locIsSouthern)), textAlign: 'center' } }, '☀️ ' + sunLabelLoc(estSun(locSnapped, locObstruction, locIsSouthern))),
+            locSnapped && React.createElement('div', { style: { fontFamily:"'Pixelify Sans',sans-serif", fontSize: 14, color: sunColorLoc(estSun(locSnapped, locObstruction, locIsSouthern)), textAlign: 'center' } }, emojiSpan('☀️ ' + sunLabelLoc(estSun(locSnapped, locObstruction, locIsSouthern)))),
             React.createElement('div', { style: { display: 'flex', gap: 12, marginTop: 4 } },
                 React.createElement('button', { type: 'button', onClick: () => closeLocCompass(true, false), style: { fontFamily:"'Press Start 2P',monospace", fontSize: 9, background: '#2A6018', color: '#C8E8A8', border: '2px solid #4A9838', padding: '12px 22px', cursor: 'pointer' } }, '✓ LOCK ' + (locSnapped || '')),
                 React.createElement('button', { type: 'button', onClick: () => closeLocCompass(false, false), style: { fontFamily:"'Pixelify Sans',sans-serif", fontSize: 13, background: 'transparent', color: '#5A7A48', border: '1px solid #1A3018', padding: '12px 16px', cursor: 'pointer' } }, 'Cancel')
@@ -8233,7 +8233,7 @@ function MyPlantsScreen({ openTab, prefill }) {
         subEnvCompassOpen && React.createElement('div', {
             style: { position: 'fixed', inset: 0, zIndex: 9999, background: '#030803', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 14, padding: 24 }
         },
-            React.createElement('div', { style: { fontFamily:"'Press Start 2P',monospace", fontSize: 11, color: '#8AC868', letterSpacing: '0.1em' } }, '🧭 POINT AT SPOT'),
+            React.createElement('div', { style: { fontFamily:"'Press Start 2P',monospace", fontSize: 11, color: '#8AC868', letterSpacing: '0.1em' } }, emojiSpan('🧭 POINT AT SPOT')),
             React.createElement(CompassRoseSVG, { heading: subEnvLiveHeading, snapped: subEnvSnapped, isSouthern: locIsSouthern, size: 200 }),
             React.createElement('div', { style: { display: 'flex', gap: 12 } },
                 React.createElement('button', { type: 'button', onClick: () => closeLocCompass(true, true), style: { fontFamily:"'Press Start 2P',monospace", fontSize: 9, background: '#2A6018', color: '#C8E8A8', border: '2px solid #4A9838', padding: '10px 18px', cursor: 'pointer' } }, '✓ LOCK ' + (subEnvSnapped || '')),
@@ -8242,7 +8242,7 @@ function MyPlantsScreen({ openTab, prefill }) {
         ),
         React.createElement('div', { style: { background: '#060D04', border: '2px solid #2A4018', width: '100%', maxWidth: 420, display: 'flex', flexDirection: 'column', gap: 0 } },
             React.createElement('div', { style: { background: 'linear-gradient(90deg,#0A1A06,#060D04)', padding: '12px 14px', borderBottom: '1px solid #1A3018', display: 'flex', alignItems: 'center', justifyContent: 'space-between' } },
-                React.createElement('div', { style: { fontFamily:"'Press Start 2P',monospace", fontSize: 11, color: '#8AC868', letterSpacing: '0.08em' } }, '🌿 ADD LOCATION'),
+                React.createElement('div', { style: { fontFamily:"'Press Start 2P',monospace", fontSize: 11, color: '#8AC868', letterSpacing: '0.08em' } }, emojiSpan('🌿 ADD LOCATION')),
                 React.createElement('button', { type: 'button', onClick: () => setLocModal(false), style: { background: 'transparent', border: 'none', color: '#5A7A48', cursor: 'pointer', fontFamily:"'Pixelify Sans',sans-serif", fontSize: 20, lineHeight: 1 } }, '✕')
             ),
             React.createElement('div', { style: { padding: '14px', display: 'flex', flexDirection: 'column', gap: 12 } },
@@ -8259,7 +8259,7 @@ function MyPlantsScreen({ openTab, prefill }) {
                 ),
                 LOC_TYPES_LIST.find(t => t.id === locType) && LOC_TYPES_LIST.find(t => t.id === locType).hasDir && React.createElement('div', null,
                     React.createElement('div', { style: { fontFamily:"'Pixelify Sans',sans-serif", fontSize: 12, color: '#5A7A48', marginBottom: 5 } }, 'Direction it faces'),
-                    locCompassAvail && React.createElement('button', { type: 'button', onClick: () => openLocCompass(false), style: { fontFamily:"'Pixelify Sans',sans-serif", fontSize: 13, background: '#0E1E0A', border: '2px solid #2A6018', color: '#8AC868', padding: '10px 0', cursor: 'pointer', width: '100%', marginBottom: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 } }, React.createElement('span', { style: { fontSize: 20 } }, '🧭'), ' Point & Set Direction'),
+                    locCompassAvail && React.createElement('button', { type: 'button', onClick: () => openLocCompass(false), style: { fontFamily:"'Pixelify Sans',sans-serif", fontSize: 13, background: '#0E1E0A', border: '2px solid #2A6018', color: '#8AC868', padding: '10px 0', cursor: 'pointer', width: '100%', marginBottom: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 } }, React.createElement('span', { style: { fontSize: 20, fontFamily: emojiFont } }, '🧭'), ' Point & Set Direction'),
                     locCompassErr && React.createElement('div', { style: { fontFamily:"'Pixelify Sans',sans-serif", fontSize: 12, color: '#E06050', marginBottom: 6 } }, locCompassErr),
                     React.createElement('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 4 } },
                         ['NW','N','NE','W','','E','SW','S','SE'].map((d, i) => {
@@ -8267,7 +8267,7 @@ function MyPlantsScreen({ openTab, prefill }) {
                             const isPrimary = locIsSouthern ? ['N','NE','NW'].includes(d) : ['S','SE','SW'].includes(d);
                             const sh = estSun(d, locObstruction, locIsSouthern);
                             return React.createElement('button', { key: d, type: 'button', onClick: () => setLocDirection(d), style: { fontFamily:"'Press Start 2P',monospace", fontSize: 9, background: locDirection === d ? '#1A3A10' : '#080F08', border: `2px solid ${locDirection === d ? '#FFD060' : isPrimary ? '#5A3A08' : '#1A3018'}`, color: locDirection === d ? '#FFD060' : isPrimary ? '#C87820' : '#3A6A30', padding: '9px 4px', cursor: 'pointer', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 } },
-                                d, React.createElement('span', { style: { fontSize: 8, color: sunColorLoc(sh), fontFamily:"'Pixelify Sans',sans-serif" } }, sh != null ? sh + 'h☀️' : ''));
+                                d, React.createElement('span', { style: { fontSize: 8, color: sunColorLoc(sh), fontFamily:"'Pixelify Sans',sans-serif" } }, sh != null ? emojiSpan(sh + 'h☀️') : ''));
                         })
                     )
                 ),
@@ -8276,7 +8276,7 @@ function MyPlantsScreen({ openTab, prefill }) {
                     React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 3 } },
                         Object.entries(OBS_LABELS).map(([k, v]) => React.createElement('button', { key: k, type: 'button', onClick: () => setLocObstruction(k), style: { fontFamily:"'Pixelify Sans',sans-serif", fontSize: 12, background: locObstruction === k ? '#1A3A10' : 'transparent', border: `1px solid ${locObstruction === k ? '#4A9838' : '#1A3018'}`, color: locObstruction === k ? '#C8E8A8' : '#5A7A48', padding: '7px 10px', cursor: 'pointer', textAlign: 'left' } }, (locObstruction === k ? '✓ ' : '  ') + v))
                     ),
-                    (function() { const s = estSun(locDirection, locObstruction, locIsSouthern); return s != null && React.createElement('div', { style: { marginTop: 8, padding: '9px 12px', background: '#0A140A', border: `2px solid ${sunColorLoc(s)}`, fontFamily:"'Pixelify Sans',sans-serif", fontSize: 13, color: sunColorLoc(s) } }, '☀️ ' + locDirection + '-facing · ' + sunLabelLoc(s), locIsSouthern && React.createElement('div', { style: { fontSize: 11, color: '#5A7A48', marginTop: 3 } }, '📍 Southern hemisphere adjusted')); })()
+                    (function() { const s = estSun(locDirection, locObstruction, locIsSouthern); return s != null && React.createElement('div', { style: { marginTop: 8, padding: '9px 12px', background: '#0A140A', border: `2px solid ${sunColorLoc(s)}`, fontFamily:"'Pixelify Sans',sans-serif", fontSize: 13, color: sunColorLoc(s) } }, emojiSpan('☀️ ' + locDirection + '-facing · ' + sunLabelLoc(s)), locIsSouthern && React.createElement('div', { style: { fontSize: 11, color: '#5A7A48', marginTop: 3 } }, emojiSpan('📍 Southern hemisphere adjusted'))); })()
                 ),
                 locType === 'garden' && React.createElement('div', null,
                     React.createElement('div', { style: { fontFamily:"'Pixelify Sans',sans-serif", fontSize: 12, color: '#5A7A48', marginBottom: 5 } }, 'Soil type'),
@@ -8292,7 +8292,7 @@ function MyPlantsScreen({ openTab, prefill }) {
                 ),
                 React.createElement('div', { style: { borderTop: '1px solid #1A3018', paddingTop: 12 } },
                     React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 } },
-                        React.createElement('div', { style: { fontFamily:"'Press Start 2P',monospace", fontSize: 9, color: '#6AC848', letterSpacing: '0.06em' } }, '🌿 SUB-ENVIRONMENTS'),
+                        React.createElement('div', { style: { fontFamily:"'Press Start 2P',monospace", fontSize: 9, color: '#6AC848', letterSpacing: '0.06em' } }, emojiSpan('🌿 SUB-ENVIRONMENTS')),
                         React.createElement('button', { type: 'button', onClick: () => { setAddingSubEnv(true); setSubEnvDraft({ name: '', direction: locDirection, obstruction: locObstruction, lightLevel: 'medium', heatSource: 'none', humidity: 'average', airflow: 'still', windowDist: '2m+', notes: '' }); }, style: { fontFamily:"'Pixelify Sans',sans-serif", fontSize: 12, background: 'transparent', border: '1px solid #2A6018', color: '#6AC848', padding: '3px 9px', cursor: 'pointer' } }, '+ Add')
                     ),
                     React.createElement('div', { style: { fontFamily:"'Pixelify Sans',sans-serif", fontSize: 11, color: '#3A5A28', marginBottom: 8 } }, 'Distinct spots with different light, heat, humidity or airflow'),
@@ -8316,7 +8316,7 @@ function MyPlantsScreen({ openTab, prefill }) {
                         React.createElement('input', { value: subEnvDraft.name, onChange: e => setSubEnvDraft(d => Object.assign({}, d, { name: e.target.value })), placeholder: LOC_TYPES_LIST.find(t=>t.id===locType)&&LOC_TYPES_LIST.find(t=>t.id===locType).hasDir ? 'e.g. Open railing, Wall corner, Under table' : 'e.g. South windowsill, Near radiator, Back shelf', style: { fontFamily:"'Pixelify Sans',sans-serif", fontSize: 12, background: '#060D04', border: '1px solid #1A3018', color: '#C8E8A8', padding: '7px 9px', width: '100%', boxSizing: 'border-box' } }),
                         LOC_TYPES_LIST.find(t=>t.id===locType)&&LOC_TYPES_LIST.find(t=>t.id===locType).hasDir ? React.createElement(React.Fragment, null,
                             React.createElement('div', { style: { fontFamily:"'Pixelify Sans',sans-serif", fontSize: 11, color: '#5A7A48' } }, 'Direction override'),
-                            locCompassAvail && React.createElement('button', { type: 'button', onClick: () => openLocCompass(true), style: { fontFamily:"'Pixelify Sans',sans-serif", fontSize: 12, background: '#0E1E0A', border: '1px solid #2A6018', color: '#8AC868', padding: '6px', cursor: 'pointer', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 } }, '🧭 Point compass'),
+                            locCompassAvail && React.createElement('button', { type: 'button', onClick: () => openLocCompass(true), style: { fontFamily:"'Pixelify Sans',sans-serif", fontSize: 12, background: '#0E1E0A', border: '1px solid #2A6018', color: '#8AC868', padding: '6px', cursor: 'pointer', width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 } }, emojiSpan('🧭 Point compass')),
                             React.createElement('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 3 } },
                                 ['NW','N','NE','W','','E','SW','S','SE'].map((d, i) => {
                                     if (!d) return React.createElement('div', { key: i });
@@ -8328,25 +8328,25 @@ function MyPlantsScreen({ openTab, prefill }) {
                                 Object.entries(OBS_LABELS).map(([k, v]) => React.createElement('button', { key: k, type: 'button', onClick: () => setSubEnvDraft(d => Object.assign({}, d, { obstruction: k })), style: { fontFamily:"'Pixelify Sans',sans-serif", fontSize: 11, background: subEnvDraft.obstruction === k ? '#1A3A10' : 'transparent', border: `1px solid ${subEnvDraft.obstruction === k ? '#4A9838' : '#1A3018'}`, color: subEnvDraft.obstruction === k ? '#C8E8A8' : '#4A6A38', padding: '4px 7px', cursor: 'pointer' } }, v))
                             )
                         ) : React.createElement(React.Fragment, null,
-                            React.createElement('div', { style: { fontFamily:"'Pixelify Sans',sans-serif", fontSize: 11, color: '#5A7A48', marginBottom: 2 } }, '☀️ Light level'),
+                            React.createElement('div', { style: { fontFamily:"'Pixelify Sans',sans-serif", fontSize: 11, color: '#5A7A48', marginBottom: 2 } }, emojiSpan('☀️ Light level')),
                             React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 3 } },
                                 [['deep-shade','🌑 Deep shade'],['low','🌒 Low'],['medium','🌓 Medium'],['bright-indirect','🌔 Bright indirect'],['direct','🌕 Direct sun']].map(([k,v]) =>
                                     React.createElement('button', { key: k, type: 'button', onClick: () => setSubEnvDraft(d => Object.assign({}, d, { lightLevel: k })), style: { fontFamily:"'Pixelify Sans',sans-serif", fontSize: 11, background: subEnvDraft.lightLevel === k ? '#1A3A10' : 'transparent', border: `1px solid ${subEnvDraft.lightLevel === k ? '#4A9838' : '#1A3018'}`, color: subEnvDraft.lightLevel === k ? '#C8E8A8' : '#5A7A48', padding: '4px 7px', cursor: 'pointer' } }, v)
                                 )
                             ),
-                            React.createElement('div', { style: { fontFamily:"'Pixelify Sans',sans-serif", fontSize: 11, color: '#5A7A48', marginTop: 4, marginBottom: 2 } }, '🌡 Heat source nearby'),
+                            React.createElement('div', { style: { fontFamily:"'Pixelify Sans',sans-serif", fontSize: 11, color: '#5A7A48', marginTop: 4, marginBottom: 2 } }, emojiSpan('🌡 Heat source nearby')),
                             React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 3 } },
                                 [['none','None'],['radiator','Radiator'],['underfloor','Underfloor'],['ac-vent','AC vent'],['fireplace','Fireplace'],['appliance','Appliance']].map(([k,v]) =>
                                     React.createElement('button', { key: k, type: 'button', onClick: () => setSubEnvDraft(d => Object.assign({}, d, { heatSource: k })), style: { fontFamily:"'Pixelify Sans',sans-serif", fontSize: 11, background: subEnvDraft.heatSource === k ? '#1A3A10' : 'transparent', border: `1px solid ${subEnvDraft.heatSource === k ? '#4A9838' : '#1A3018'}`, color: subEnvDraft.heatSource === k ? '#C8E8A8' : '#5A7A48', padding: '4px 7px', cursor: 'pointer' } }, v)
                                 )
                             ),
-                            React.createElement('div', { style: { fontFamily:"'Pixelify Sans',sans-serif", fontSize: 11, color: '#5A7A48', marginTop: 4, marginBottom: 2 } }, '💧 Humidity'),
+                            React.createElement('div', { style: { fontFamily:"'Pixelify Sans',sans-serif", fontSize: 11, color: '#5A7A48', marginTop: 4, marginBottom: 2 } }, emojiSpan('💧 Humidity')),
                             React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 3 } },
                                 [['dry','Dry'],['average','Average'],['humid','Humid'],['very-humid','Very humid (bathroom)']].map(([k,v]) =>
                                     React.createElement('button', { key: k, type: 'button', onClick: () => setSubEnvDraft(d => Object.assign({}, d, { humidity: k })), style: { fontFamily:"'Pixelify Sans',sans-serif", fontSize: 11, background: subEnvDraft.humidity === k ? '#1A3A10' : 'transparent', border: `1px solid ${subEnvDraft.humidity === k ? '#4A9838' : '#1A3018'}`, color: subEnvDraft.humidity === k ? '#C8E8A8' : '#5A7A48', padding: '4px 7px', cursor: 'pointer' } }, v)
                                 )
                             ),
-                            React.createElement('div', { style: { fontFamily:"'Pixelify Sans',sans-serif", fontSize: 11, color: '#5A7A48', marginTop: 4, marginBottom: 2 } }, '💨 Airflow'),
+                            React.createElement('div', { style: { fontFamily:"'Pixelify Sans',sans-serif", fontSize: 11, color: '#5A7A48', marginTop: 4, marginBottom: 2 } }, emojiSpan('💨 Airflow')),
                             React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 3 } },
                                 [['still','Still'],['light-draft','Light draft'],['direct-draft','Direct draft (AC/fan)'],['open-window','Open window']].map(([k,v]) =>
                                     React.createElement('button', { key: k, type: 'button', onClick: () => setSubEnvDraft(d => Object.assign({}, d, { airflow: k })), style: { fontFamily:"'Pixelify Sans',sans-serif", fontSize: 11, background: subEnvDraft.airflow === k ? '#1A3A10' : 'transparent', border: `1px solid ${subEnvDraft.airflow === k ? '#4A9838' : '#1A3018'}`, color: subEnvDraft.airflow === k ? '#C8E8A8' : '#5A7A48', padding: '4px 7px', cursor: 'pointer' } }, v)
@@ -8505,7 +8505,7 @@ function MyPlantsScreen({ openTab, prefill }) {
                             React.createElement(StatusMessage, { type: editStatus.type, message: editStatus.message })),
                         React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 6, margin: '4px 0 8px' } },
                             React.createElement("div", { style: { height: 2, flex: 1, background: theme.sep, opacity: 0.4 } }),
-                            React.createElement("span", { style: Object.assign({}, pxS, { fontSize: '10px', fontWeight: 900, color: theme.txtS, letterSpacing: '0.08em', whiteSpace: 'nowrap' }) }, "\uD83C\uDF3F IDENTITY"),
+                            React.createElement("span", { style: Object.assign({}, pxS, { fontSize: '10px', fontWeight: 900, color: theme.txtS, letterSpacing: '0.08em', whiteSpace: 'nowrap' }) }, emojiSpan("\uD83C\uDF3F IDENTITY")),
                             React.createElement("div", { style: { height: 2, flex: 1, background: theme.sep, opacity: 0.4 } })
                         ),
                         React.createElement("div", { className: "grid grid-cols-2 gap-2 mb-2" },
@@ -8556,7 +8556,7 @@ function MyPlantsScreen({ openTab, prefill }) {
                             React.createElement("input", { type: "date", value: edit.birthday || '', onChange: e => setEdit(prev => Object.assign({}, prev, { birthday: e.target.value })), className: "w-full border-4 px-2 py-1.5 mt-1 input-depth", style: Object.assign({}, pxS, { fontSize: '13px', color: theme.txtP, borderColor: theme.cardBorder, background: theme.cardBg }) })),
                         React.createElement("div", { id: 'sched-section-' + editUid, style: { display: 'flex', alignItems: 'center', gap: 6, margin: '10px 0 8px' } },
                             React.createElement("div", { style: { height: 2, flex: 1, background: theme.sep, opacity: 0.4 } }),
-                            React.createElement("span", { style: Object.assign({}, pxS, { fontSize: '10px', fontWeight: 900, color: theme.txtS, letterSpacing: '0.08em', whiteSpace: 'nowrap' }) }, "\uD83D\uDCA7 WATERING & FERTILIZING"),
+                            React.createElement("span", { style: Object.assign({}, pxS, { fontSize: '10px', fontWeight: 900, color: theme.txtS, letterSpacing: '0.08em', whiteSpace: 'nowrap' }) }, emojiSpan("\uD83D\uDCA7 WATERING & FERTILIZING")),
                             React.createElement("div", { style: { height: 2, flex: 1, background: theme.sep, opacity: 0.4 } })
                         ),
                         React.createElement("div", { style: Object.assign({}, pxS, {
@@ -8765,7 +8765,7 @@ function PlantKnowledgePanel({ plant, inline }) {
                 flexShrink: 0,
                 transition: 'background 0.2s ease, color 0.2s ease, opacity 0.2s ease',
             })
-        }, props.icon + ' ' + props.label);
+        }, emojiSpan(props.icon + ' ' + props.label));
     }
 
     var overviewContent = React.createElement('div', null,
@@ -9140,7 +9140,7 @@ immediateActions should be an array of strings (each is one numbered step). Empt
 
     return React.createElement('div', { style: { marginTop: 12, border: `3px solid #c0392b`, background: theme.cardBg } },
         React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderBottom: `2px solid ${theme.rowBorder}`, background: 'rgba(192,57,43,0.08)' } },
-            React.createElement('span', { style: Object.assign({}, px8S, { color: 'var(--c-urgent)' }) }, '🔬 DIAGNOSE'),
+            React.createElement('span', { style: Object.assign({}, px8S, { color: 'var(--c-urgent)' }) }, emojiSpan('🔬 DIAGNOSE')),
             React.createElement('button', { type: 'button', onClick: () => { setOpen(false); setStep('symptoms'); setSelected([]); setAiResult(null); setChatHistory([]); setAiLoading(false); }, style: { background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, color: theme.txtS } }, '✕')),
 
         React.createElement('div', { style: { padding: 14 } },
@@ -10104,7 +10104,7 @@ function PropsSection({ locations, prefill }) {
                         return React.createElement("div", { style: { marginBottom: 12, border: `2px solid ${theme.rowBorder}`, background: theme.cardBg } },
                             /* card header */
                             React.createElement("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', borderBottom: `2px solid ${theme.rowBorder}` } },
-                                React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', fontWeight: 900, color: theme.txtS }) }, "✂️ PROP DETAILS"),
+                                React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', fontWeight: 900, color: theme.txtS }) }, emojiSpan("✂️ PROP DETAILS")),
                                 !isDone && React.createElement("button", { type: "button",
                                     onClick: function() {
                                         if (isEditing) { setEditPropId(null); setEditPropForm({}); }
@@ -11228,7 +11228,7 @@ return (React.createElement("div", { className: `flex flex-col ${isSmall ? 'p-3'
                                         background: nudge.type === 'good' ? 'rgba(58,122,72,0.10)' : 'rgba(80,80,140,0.09)',
                                         border: '1px solid ' + (nudge.type === 'good' ? '#5A9A60' : '#8080B0'),
                                     }},
-                                        React.createElement('span', { style: { fontSize: 14, flexShrink: 0 } }, nudge.icon),
+                                        React.createElement('span', { style: { fontSize: 14, flexShrink: 0, fontFamily: emojiFont } }, nudge.icon),
                                         React.createElement('span', { style: Object.assign({}, pxS, { fontSize: '11px', color: nudge.type === 'good' ? '#2A5E36' : '#3A3A6A', lineHeight: 1.5 }) }, nudge.msg)
                                     );
                                 })(),
@@ -11509,7 +11509,7 @@ return (React.createElement("div", { className: `flex flex-col ${isSmall ? 'p-3'
                                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
                                 }
                             },
-                                React.createElement('span', { style: { fontSize: '18px', lineHeight: 1, fontFamily: "'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif" } }, '🪴'),
+                                React.createElement('span', { style: { fontSize: '18px', lineHeight: 1, fontFamily: emojiFont } }, '🪴'),
                                 'REPOT'
                             ),
                             React.createElement("button", {
@@ -11524,7 +11524,7 @@ return (React.createElement("div", { className: `flex flex-col ${isSmall ? 'p-3'
                                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
                                 }
                             },
-                                React.createElement('span', { style: { fontSize: '18px', lineHeight: 1, fontFamily: "'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif" } }, '✏️'),
+                                React.createElement('span', { style: { fontSize: '18px', lineHeight: 1, fontFamily: emojiFont } }, '✏️'),
                                 'EDIT'
                             )
                         )
@@ -11546,7 +11546,7 @@ return (React.createElement("div", { className: `flex flex-col ${isSmall ? 'p-3'
                         borderBottom: 'none',
                         padding: 20,
                     }},
-                        React.createElement("div", { style: { fontFamily: "'Press Start 2P',cursive", fontSize: '12px', color: theme.txtP, marginBottom: 14 } }, React.createElement('span', { style: { fontFamily: "'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif" } }, '\uD83E\uDEB4'), ' REPOT'),
+                        React.createElement("div", { style: { fontFamily: "'Press Start 2P',cursive", fontSize: '12px', color: theme.txtP, marginBottom: 14 } }, React.createElement('span', { style: { fontFamily: emojiFont } }, '\uD83E\uDEB4'), ' REPOT'),
                         React.createElement("div", { className: "space-y-2" },
                             React.createElement("div", null,
                                 React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtS, fontWeight: 800 }) }, "New Pot Size"),
@@ -11686,11 +11686,11 @@ return (React.createElement("div", { className: `flex flex-col ${isSmall ? 'p-3'
                                 (editWaterEvery && editFertEvery) ? '✓ SCHEDULE SET' : '⚠ SCHEDULE INCOMPLETE'
                             ),
                             React.createElement("div", { style: { marginBottom: 8 } },
-                                React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtS, fontWeight: 800 }) }, "💧 Water Every (days)"),
+                                React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtS, fontWeight: 800 }) }, emojiSpan("💧 Water Every (days)")),
                                 React.createElement("input", { value: editWaterEvery, onChange: e => setEditWaterEvery(e.target.value.replace(/[^0-9]/g,'')), placeholder: "e.g. 7", className: "w-full border-4 px-3 py-2 mt-1 input-depth", style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', borderColor: editWaterEvery ? theme.cardBorder : '#C87820', color: theme.txtP, background: theme.rowBg }) })
                             ),
                             React.createElement("div", { key: "fert-every" },
-                            React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtS, fontWeight: 800 }) }, "🌿 Fertilize Every (days)"),
+                            React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtS, fontWeight: 800 }) }, emojiSpan("🌿 Fertilize Every (days)")),
                             React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '11px', color: theme.txtS, opacity: 0.7, marginBottom: 2 }) }, "must fall on a watering day — multiples of water interval only"),
                             (function() {
                                 var wD = parseInt(editWaterEvery || '', 10);
@@ -11795,7 +11795,7 @@ function StatBar({ label, icon, value, max, color, bgColor, pxS, theme, sublabel
                 letterSpacing: '0.02em',
                 textShadow: isCrit ? '0 0 6px rgba(248,113,113,0.6)' : 'none',
                 transition: 'color 0.3s ease',
-            }}, icon + ' ' + label),
+            }}, emojiSpan(icon + ' ' + label)),
             React.createElement('span', { style: {
                 fontFamily: "'Press Start 2P',cursive", fontSize: '14px',
                 color: isCrit ? '#F87171' : isWarn ? '#FACC15' : '#4ADE80',
@@ -12178,7 +12178,7 @@ function CarePanel({ plant, physics, env, timeline, onEditOpen, onSaveInterval, 
                 boxShadow: isActive ? 'inset 0 2px 4px rgba(0,0,0,0.06)' : '0 3px 0 ' + theme.cardBorder,
                 transition: 'background 0.2s ease, color 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease',
             }
-        }, props.icon + ' ' + props.label);
+        }, emojiSpan(props.icon + ' ' + props.label));
     }
 
     function CareCard(props) {
@@ -12509,7 +12509,7 @@ function CarePanel({ plant, physics, env, timeline, onEditOpen, onSaveInterval, 
                 marginBottom: 4,
             }},
                 React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 6 } },
-                    React.createElement('span', { style: { fontSize: '14px', lineHeight: 1 } }, props.icon),
+                    React.createElement('span', { style: { fontSize: '14px', lineHeight: 1, fontFamily: emojiFont } }, props.icon),
                     React.createElement('span', { style: Object.assign({}, pxS, { fontSize: '13px', fontWeight: 900, color: theme.txtP, flex: 1 }) }, props.label),
                     props.evD > 0 && React.createElement('span', { style: Object.assign({}, pxS, { fontSize: '12px', color: theme.txtS }) }, 'every ' + props.evD + 'd'),
                     React.createElement('span', { style: Object.assign({}, pxS, {
@@ -12926,8 +12926,8 @@ function CarePanel({ plant, physics, env, timeline, onEditOpen, onSaveInterval, 
                     )
                 ),
             (plant.careDocUrl || plant.folderUrl) && React.createElement('div', { style: { marginTop: 8, paddingTop: 6, borderTop: '1px solid ' + theme.rowBorder } },
-                plant.careDocUrl && React.createElement('a', { href: plant.careDocUrl, target: '_blank', style: Object.assign({}, pxS, { fontSize: '14px', color: '#2980b9', fontWeight: 900, display: 'block', marginBottom: 3 }) }, '📄 Care Log'),
-                plant.folderUrl  && React.createElement('a', { href: plant.folderUrl,  target: '_blank', style: Object.assign({}, pxS, { fontSize: '14px', color: '#2980b9', fontWeight: 900, display: 'block' }) }, '🗂️ Plant Folder')
+                plant.careDocUrl && React.createElement('a', { href: plant.careDocUrl, target: '_blank', style: Object.assign({}, pxS, { fontSize: '14px', color: '#2980b9', fontWeight: 900, display: 'block', marginBottom: 3 }) }, emojiSpan('📄 Care Log')),
+                plant.folderUrl  && React.createElement('a', { href: plant.folderUrl,  target: '_blank', style: Object.assign({}, pxS, { fontSize: '14px', color: '#2980b9', fontWeight: 900, display: 'block' }) }, emojiSpan('🗂️ Plant Folder'))
             )
         );
     }
@@ -13231,7 +13231,7 @@ function UnifiedCarePanel({ plant, physics, env, pxS, theme, onEditOpen, onSaveI
             marginBottom: 4,
         }},
             React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 6, marginBottom: lastHuman || nextHuman ? 4 : 0 } },
-                React.createElement('span', { style: { fontSize: '14px', lineHeight: 1 } }, props.icon),
+                React.createElement('span', { style: { fontSize: '14px', lineHeight: 1, fontFamily: emojiFont } }, props.icon),
                 React.createElement('span', { style: Object.assign({}, pxS, { fontSize: '12px', fontWeight: 900, color: theme.txtP, flex: 1 }) }, props.label),
                 evD > 0 && React.createElement('span', { style: Object.assign({}, pxS, { fontSize: '13px', color: theme.txtS }) }, 'every ' + evD + 'd'),
                 React.createElement('span', { style: Object.assign({}, pxS, {
@@ -13314,14 +13314,14 @@ function UnifiedCarePanel({ plant, physics, env, pxS, theme, onEditOpen, onSaveI
                     ['🎂', 'Birthday',     plant.birthday                  || '—'],
                     ageStr ? ['⏳', 'Age', ageStr] : null,
                 ].filter(Boolean).map(function(r, i) { return React.createElement(React.Fragment, { key: i },
-                    React.createElement('div', { style: Object.assign({}, pxS, { fontSize: '12px', color: theme.txtS }) }, r[0] + ' ' + r[1]),
+                    React.createElement('div', { style: Object.assign({}, pxS, { fontSize: '12px', color: theme.txtS }) }, emojiSpan(r[0] + ' ' + r[1])),
                     React.createElement('div', { style: Object.assign({}, pxS, { fontSize: '13px', fontWeight: 900, color: r[2] === '—' ? theme.txtS : theme.txtP }) }, r[2])
                 ); })
             )
         ),
         (plant.careDocUrl || plant.folderUrl) && React.createElement('div', { style: { marginTop: 8, paddingTop: 6, borderTop: '1px solid ' + theme.rowBorder + '44' } },
-            plant.careDocUrl && React.createElement('a', { href: plant.careDocUrl, target: '_blank', style: Object.assign({}, pxS, { fontSize: '14px', color: '#2980b9', fontWeight: 900, display: 'block', marginBottom: 3 }) }, '📄 Care Log Doc'),
-            plant.folderUrl  && React.createElement('a', { href: plant.folderUrl,  target: '_blank', style: Object.assign({}, pxS, { fontSize: '14px', color: '#2980b9', fontWeight: 900, display: 'block' }) }, '🗂️ Plant Folder')
+            plant.careDocUrl && React.createElement('a', { href: plant.careDocUrl, target: '_blank', style: Object.assign({}, pxS, { fontSize: '14px', color: '#2980b9', fontWeight: 900, display: 'block', marginBottom: 3 }) }, emojiSpan('📄 Care Log Doc')),
+            plant.folderUrl  && React.createElement('a', { href: plant.folderUrl,  target: '_blank', style: Object.assign({}, pxS, { fontSize: '14px', color: '#2980b9', fontWeight: 900, display: 'block' }) }, emojiSpan('🗂️ Plant Folder'))
         ),
         onEditOpen && React.createElement('button', { type: 'button', onClick: onEditOpen, style: Object.assign({}, px8, {
             display: 'block', width: '100%', marginTop: 10,
@@ -13425,7 +13425,7 @@ function AlgoCompletionFlags({ plant, physics, onEditOpen }) {
                         borderLeft: '4px solid ' + (isd ? '#ef4444' : '#f97316'),
                     }},
                         React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 5, marginBottom: 3 } },
-                            React.createElement('span', { style: { fontSize: '13px', flexShrink: 0 } }, flag.icon),
+                            React.createElement('span', { style: { fontSize: '13px', flexShrink: 0, fontFamily: emojiFont } }, flag.icon),
                             React.createElement('div', { style: Object.assign({}, pxS, { fontSize: '14px', fontWeight: 900, color: isd ? '#fca5a5' : '#fdba74', lineHeight: 1.3 }) }, flag.title)
                         ),
                         React.createElement('div', { style: Object.assign({}, pxS, { fontSize: '13px', color: '#aaa', lineHeight: 1.5, paddingLeft: 22 }) }, flag.detail)
@@ -13443,7 +13443,7 @@ function AlgoCompletionFlags({ plant, physics, onEditOpen }) {
                         padding: '4px 7px',
                         background: 'rgba(255,152,0,0.07)', border: '1px solid rgba(255,152,0,0.2)',
                     }},
-                        React.createElement('span', { style: { fontSize: '14px', flexShrink: 0 } }, m.icon),
+                        React.createElement('span', { style: { fontSize: '14px', flexShrink: 0, fontFamily: emojiFont } }, m.icon),
                         React.createElement('div', { style: { flex: 1, minWidth: 0 } },
                             React.createElement('div', { style: Object.assign({}, pxS, { fontSize: '14px', fontWeight: 800, color: '#E0A020' }) }, m.label),
                             React.createElement('div', { style: Object.assign({}, pxS, { fontSize: '13px', color: '#666' }) }, m.impact)
@@ -13543,7 +13543,7 @@ function FamilyTreePanel({ plant, relatedPlants, offspring, pxS, px8S, theme, na
                 background: theme.rowBg,
             }
         },
-            React.createElement('div', { style: Object.assign({}, px8S, { color: theme.txtP, marginBottom: 8, fontSize: '14px' }) }, '🌳 FAMILY TREE'),
+            React.createElement('div', { style: Object.assign({}, px8S, { color: theme.txtP, marginBottom: 8, fontSize: '14px' }) }, emojiSpan('🌳 FAMILY TREE')),
             React.createElement('div', { style: Object.assign({}, pxS, { fontSize: '14px', color: theme.txtS, marginBottom: 10, lineHeight: 1.6 }) },
                 'No family members yet. Ready to start a lineage?'
             ),
@@ -13631,7 +13631,7 @@ function FamilyTreePanel({ plant, relatedPlants, offspring, pxS, px8S, theme, na
         ),
 
         (plant.parentPropId || plant.graduatedFromPropId) && React.createElement('div', { style: { marginBottom: 8 } },
-            React.createElement('div', { style: Object.assign({}, pxS, { fontSize: '13px', fontWeight: 800, color: theme.txtS, marginBottom: 3 }) }, '🌱 GRADUATED FROM PROP'),
+            React.createElement('div', { style: Object.assign({}, pxS, { fontSize: '13px', fontWeight: 800, color: theme.txtS, marginBottom: 3 }) }, emojiSpan('🌱 GRADUATED FROM PROP')),
             React.createElement('div', { style: Object.assign({}, pxS, { fontSize: '14px', fontWeight: 900, color: theme.txtP }) }, plant.parentPropId || plant.graduatedFromPropId)
         ),
 
@@ -14077,18 +14077,18 @@ function CompostModal({ plant, onClose, onDone }) {
             step === 'confirm' && (React.createElement(React.Fragment, null,
                 React.createElement("div", { style: { marginBottom: 12, padding: '8px 12px', border: `2px solid ${type === 'deceased' ? '#c0392b' : '#27ae60'}`,
                         background: type === 'deceased' ? '#fdf0ee' : '#f0fdf4' } },
-                    React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '12px', fontWeight: 900, color: type === 'deceased' ? '#c0392b' : '#27ae60', marginBottom: 4 }) }, type === 'deceased' ? '🪦 Moving to Compost Bin' : '🏠 Rehoming this plant'),
+                    React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '12px', fontWeight: 900, color: type === 'deceased' ? '#c0392b' : '#27ae60', marginBottom: 4 }) }, type === 'deceased' ? emojiSpan('🪦 Moving to Compost Bin') : emojiSpan('🏠 Rehoming this plant')),
                     cause && React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: '#333' }) },
                         "Cause: ",
                         React.createElement("strong", null, cause)),
                     cause && DEATH_CAUSES[causeCat || 'unknown'] && (React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', color: '#666', marginTop: 2, fontStyle: 'italic' }) },
-                        "\uD83D\uDCA1 ",
+                        emojiSpan("\uD83D\uDCA1 "),
                         getDeathCauseMeta(cause).tip))),
                 React.createElement("div", { style: { marginBottom: 12 } },
                     React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtS, fontWeight: 800, marginBottom: 4 }) }, type === 'deceased' ? 'What happened? (optional)' : 'Notes for the new owner (optional)'),
                     React.createElement("textarea", { value: detail, onChange: e => setDetail(e.target.value), rows: 3, placeholder: type === 'deceased' ? 'e.g. Kept too wet over winter...' : 'e.g. Loves bright indirect light, water weekly...', style: Object.assign(Object.assign({}, pxS), { fontSize: '12px', width: '100%', border: `3px solid ${theme.cardBorder}`, padding: '8px', resize: 'none', background: theme.rowBg, color: theme.txtP }) })),
                 React.createElement("div", { style: { display: 'flex', gap: 8 } },
-                    React.createElement("button", { type: "button", onClick: handleConfirm, disabled: saving, style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', fontWeight: 900, flex: 1, padding: '12px', border: `3px solid ${type === 'deceased' ? '#c0392b' : '#27ae60'}`, background: type === 'deceased' ? '#c0392b' : '#27ae60', color: '#fff', cursor: 'pointer', boxShadow: `0 3px 0 ${type === 'deceased' ? '#922b21' : '#1e8449'}` }) }, saving ? '...' : type === 'deceased' ? '🪦 Confirm' : '🏠 Confirm Rehome'),
+                    React.createElement("button", { type: "button", onClick: handleConfirm, disabled: saving, style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', fontWeight: 900, flex: 1, padding: '12px', border: `3px solid ${type === 'deceased' ? '#c0392b' : '#27ae60'}`, background: type === 'deceased' ? '#c0392b' : '#27ae60', color: '#fff', cursor: 'pointer', boxShadow: `0 3px 0 ${type === 'deceased' ? '#922b21' : '#1e8449'}` }) }, saving ? '...' : type === 'deceased' ? emojiSpan('🪦 Confirm') : emojiSpan('🏠 Confirm Rehome')),
                     React.createElement("button", { type: "button", onClick: () => setStep(type === 'deceased' ? 'cause_option' : 'type'), style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', color: theme.txtS, background: 'none', border: `2px solid ${theme.rowBorder}`, padding: '12px 16px', cursor: 'pointer' }) }, "\u2190 Back")))))));
 }
 function PhyloScreen({ inline }) {
@@ -15554,7 +15554,7 @@ function GalleryScreen({ uid, name }) {
                 fontSize: '10px', padding: '5px 10px', cursor: 'pointer',
                 background: theme.rowBg, border: '2px solid ' + theme.cardBorder, color: theme.txtS,
             }) }, '← Back'),
-            React.createElement('div', { style: Object.assign({}, px8, { fontSize: '13px', color: '#A8E89C', flex: 1 }) }, '📸 ' + (name || 'Gallery')),
+            React.createElement('div', { style: Object.assign({}, px8, { fontSize: '13px', color: '#A8E89C', flex: 1 }) }, emojiSpan('📸 ' + (name || 'Gallery'))),
             React.createElement('div', { style: Object.assign({}, pxS, { fontSize: '12px', color: theme.txtS }) }, photos.length + ' photo' + (photos.length !== 1 ? 's' : '')),
             // Toggle grid / then-now
             photos.length >= 2 && React.createElement('button', { type: 'button', onClick: function() { setView(function(v) { return v === 'grid' ? 'then-now' : 'grid'; }); }, style: Object.assign({}, pxS, {
@@ -15566,7 +15566,7 @@ function GalleryScreen({ uid, name }) {
         // Body
         React.createElement('div', { style: { flex: 1, overflowY: 'auto', padding: 12 } },
 
-            loading && React.createElement('div', { style: Object.assign({}, pxS, { textAlign: 'center', color: theme.txtS, padding: 40 }) }, '⏳ Loading photos...'),
+            loading && React.createElement('div', { style: Object.assign({}, pxS, { textAlign: 'center', color: theme.txtS, padding: 40 }) }, emojiSpan('⏳ Loading photos...')),
             error && React.createElement('div', { style: Object.assign({}, pxS, { color: '#B83030', padding: 16 }) }, '❌ ' + error),
             !loading && !error && photos.length === 0 && React.createElement('div', { style: { textAlign: 'center', padding: '40px 20px' } },
                 React.createElement('div', { style: { fontSize: 48, marginBottom: 12 } }, '📷'),

@@ -20,7 +20,7 @@ const PLANTOS_BACKEND_CFG = {
 
   CANONICAL_PLANT_FOLDER_PREFIX: 'UID_',
   PHOTOS_SUBFOLDER: 'Photos',
-  REBUILD_CHUNK: 35,
+  REBUILD_CHUNK: 10,
 
   QR: {
     SIZE: '320x320',
@@ -164,7 +164,12 @@ function plantosGetInventorySheet_()  { return plantosGetSheet_(PLANTOS_BACKEND_
 
 function plantosReadInventory_() {
   const sh = plantosGetInventorySheet_();
-  const values = sh.getDataRange().getValues();
+  // Use getLastColumn() instead of getDataRange() to avoid picking up
+  // phantom columns from formatting/merged cells far to the right
+  const numCols = sh.getLastColumn();
+  const lastRow = sh.getLastRow();
+  if (numCols < 1 || lastRow < 1) return { sh, values: [[]], headers: [], hmap: {} };
+  const values = sh.getRange(1, 1, lastRow, numCols).getValues();
   const headers = values[0] || [];
   return { sh, values, headers, hmap: plantosHeaderMap_(headers) };
 }
@@ -479,25 +484,29 @@ function plantosRebuildDeploymentAssets_(opts) {
     if (!ok.ok) return { ok: false, message: 'ACTIVE_WEBAPP_URL not set or invalid.\n' + ok.reason };
     const plantsRoot = plantosGetPlantsRoot_();
     const qrRoot = plantosGetQrRoot_();
-    try { plantosEnsureInventoryQrColumns_(); } catch (e) {}
-    const { sh, headers, hmap } = plantosReadInventory_();
+    try { plantosEnsureInventoryQrColumns_(); } catch (e) { Logger.log('[PlantOS] ensureQrCols error (non-fatal): ' + e); }
+    // Flush any pending writes before reading so column count is accurate
+    SpreadsheetApp.flush();
+    const sh = plantosGetInventorySheet_();
+    const numCols = sh.getLastColumn();
+    const headerRow = sh.getRange(1, 1, 1, numCols).getValues()[0] || [];
+    const hmap = plantosHeaderMap_(headerRow);
     const H = PLANTOS_BACKEND_CFG.HEADERS;
     const uidCol = plantosCol_(hmap, H.UID);
-    if (uidCol < 0) return { ok: false, message: `Missing required header: "${H.UID}"` };
+    if (uidCol < 0) return { ok: false, message: 'Missing required header: "' + H.UID + '"' };
     const lastRow = sh.getLastRow();
     if (lastRow < 2) return { ok: true, message: 'No plants to rebuild.' };
     let cursor = 2;
     if (opts.resume) { const c = Number(plantosGetSetting_(PLANTOS_BACKEND_CFG.SETTINGS_KEYS.REBUILD_CURSOR) || ''); if (c >= 2) cursor = c; }
     if (cursor > lastRow) { plantosSetSetting_(PLANTOS_BACKEND_CFG.SETTINGS_KEYS.REBUILD_CURSOR, ''); return { ok: true, message: 'Nothing to do. Cursor already past end.' }; }
     const start = cursor, end = Math.min(lastRow, start + PLANTOS_BACKEND_CFG.REBUILD_CHUNK - 1);
-    const range = sh.getRange(start, 1, end - start + 1, headers.length);
+    const range = sh.getRange(start, 1, end - start + 1, numCols);
     const block = range.getValues();
     const folderIdCol = plantosCol_(hmap, H.FOLDER_ID), folderUrlCol = plantosCol_(hmap, H.FOLDER_URL);
     const careDocIdCol = plantosCol_(hmap, H.CARE_DOC_ID), careDocUrlCol = plantosCol_(hmap, H.CARE_DOC_URL);
     const qrFileIdCol = plantosCol_(hmap, H.QR_FILE_ID), qrUrlCol = plantosCol_(hmap, H.QR_URL);
     const plantPageUrlCol = plantosCol_(hmap, H.PLANT_PAGE_URL), qrScriptUrlCol = plantosCol_(hmap, H.QR_SCRIPT_URL), qrImageCol = plantosCol_(hmap, H.QR_IMAGE);
     const totalPlants = lastRow - 1;
-    // Pre-compute next UID so we can assign UIDs to rows that lack one
     let nextUidNum = 0;
     try {
       const allVals = sh.getRange(2, uidCol + 1, lastRow - 1, 1).getValues();
@@ -507,55 +516,87 @@ function plantosRebuildDeploymentAssets_(opts) {
       }
     } catch (e) {}
     if (nextUidNum <= 0) nextUidNum = Date.now() - 1;
+    const errors = [];
+    let rebuilt = 0;
     for (let i = 0; i < block.length; i++) {
       const row = block[i];
-      let uid = plantosSafeStr_(row[uidCol]).trim();
-      if (!uid) {
-        nextUidNum++;
-        uid = String(nextUidNum);
-        row[uidCol] = uid;
+      try {
+        let uid = plantosSafeStr_(row[uidCol]).trim();
+        if (!uid) {
+          nextUidNum++;
+          uid = String(nextUidNum);
+          row[uidCol] = uid;
+        }
+        Logger.log('[PlantOS] Rebuilding row ' + (start + i) + '/' + (totalPlants + 1) + ': UID=' + uid);
+        const primary = plantosComputePrimaryLabel_(hmap, row);
+        const plantPageUrl = plantosBuildPlantPageUrl_(baseUrl, uid);
+        if (plantPageUrlCol >= 0 && !plantosSafeStr_(row[plantPageUrlCol]).trim()) row[plantPageUrlCol] = plantPageUrl;
+        const qrScriptUrl = plantosBuildQrScriptUrl_(plantPageUrl);
+        if (qrScriptUrlCol >= 0 && !plantosSafeStr_(row[qrScriptUrlCol]).trim()) row[qrScriptUrlCol] = qrScriptUrl;
+        if (qrImageCol >= 0 && qrScriptUrlCol >= 0 && !plantosSafeStr_(row[qrImageCol]).trim()) {
+          const colLetter = plantosColToA1_(qrScriptUrlCol + 1);
+          row[qrImageCol] = '=IF(LEN(' + colLetter + (start + i) + ')=0,"",IMAGE(' + colLetter + (start + i) + '))';
+        }
+        let plantFolder = null;
+        if (folderIdCol >= 0) {
+          const fid = plantosSafeStr_(row[folderIdCol]).trim();
+          if (fid) try { plantFolder = DriveApp.getFolderById(fid); } catch (e) { plantFolder = null; }
+        }
+        if (!plantFolder) {
+          plantFolder = plantosResolveOrCreatePlantFolder_(plantsRoot, uid);
+          try { const cn = plantosCanonicalFolderName_(uid); if (plantFolder.getName() !== cn) plantFolder.setName(cn); } catch (e) {}
+          if (folderIdCol >= 0) row[folderIdCol] = plantFolder.getId();
+          if (folderUrlCol >= 0) row[folderUrlCol] = plantFolder.getUrl();
+        } else {
+          try { const cn = plantosCanonicalFolderName_(uid); if (plantFolder.getName() !== cn) plantFolder.setName(cn); } catch (e) {}
+          if (folderUrlCol >= 0 && !plantosSafeStr_(row[folderUrlCol]).trim()) row[folderUrlCol] = plantFolder.getUrl();
+        }
+        try { plantosEnsureSubfolder_(plantFolder, PLANTOS_BACKEND_CFG.PHOTOS_SUBFOLDER); } catch (e) { Logger.log('[PlantOS] Photos subfolder error for ' + uid + ': ' + e); }
+        if (careDocIdCol >= 0 && !plantosSafeStr_(row[careDocIdCol]).trim()) {
+          try {
+            const docFile = plantosEnsureCareDoc_(plantFolder, uid, primary);
+            row[careDocIdCol] = docFile.getId();
+            if (careDocUrlCol >= 0) row[careDocUrlCol] = docFile.getUrl();
+          } catch (e) { Logger.log('[PlantOS] Care doc error for ' + uid + ': ' + e); }
+        } else if (careDocUrlCol >= 0 && careDocIdCol >= 0 && plantosSafeStr_(row[careDocIdCol]).trim() && !plantosSafeStr_(row[careDocUrlCol]).trim()) {
+          try { row[careDocUrlCol] = DriveApp.getFileById(String(row[careDocIdCol])).getUrl(); } catch (e) {}
+        }
+        if (qrFileIdCol >= 0 && !plantosSafeStr_(row[qrFileIdCol]).trim()) {
+          try { const qrFile = plantosEnsurePlantQr_(qrRoot, uid, primary, plantPageUrl); row[qrFileIdCol] = qrFile.getId(); if (qrUrlCol >= 0) row[qrUrlCol] = qrFile.getUrl(); } catch (e) { Logger.log('[PlantOS] QR error for ' + uid + ': ' + e); }
+        } else if (qrUrlCol >= 0 && qrFileIdCol >= 0 && plantosSafeStr_(row[qrFileIdCol]).trim() && !plantosSafeStr_(row[qrUrlCol]).trim()) {
+          try { row[qrUrlCol] = plantosDriveRetry_('getUrl(QR)', function() { return DriveApp.getFileById(String(row[qrFileIdCol])).getUrl(); }, 2); } catch (e) {}
+        }
+        block[i] = row;
+        rebuilt++;
+      } catch (rowErr) {
+        errors.push('Row ' + (start + i) + ': ' + (rowErr.message || rowErr));
+        Logger.log('[PlantOS] Row ' + (start + i) + ' failed: ' + rowErr);
       }
-      Logger.log('[PlantOS] Rebuilding ' + (start + i - 1) + '/' + totalPlants + ': ' + uid);
-      const primary = plantosComputePrimaryLabel_(hmap, row);
-      const plantPageUrl = plantosBuildPlantPageUrl_(baseUrl, uid);
-      if (plantPageUrlCol >= 0 && !plantosSafeStr_(row[plantPageUrlCol]).trim()) row[plantPageUrlCol] = plantPageUrl;
-      const qrScriptUrl = plantosBuildQrScriptUrl_(plantPageUrl);
-      if (qrScriptUrlCol >= 0 && !plantosSafeStr_(row[qrScriptUrlCol]).trim()) row[qrScriptUrlCol] = qrScriptUrl;
-      if (qrImageCol >= 0 && qrScriptUrlCol >= 0 && !plantosSafeStr_(row[qrImageCol]).trim()) {
-        const colLetter = plantosColToA1_(qrScriptUrlCol + 1);
-        row[qrImageCol] = `=IF(LEN(${colLetter}${start + i})=0,"",IMAGE(${colLetter}${start + i}))`;
-      }
-      let plantFolder = null;
-      if (folderIdCol >= 0) { const fid = plantosSafeStr_(row[folderIdCol]).trim(); if (fid) try { plantFolder = DriveApp.getFolderById(fid); } catch (e) { plantFolder = null; } }
-      if (!plantFolder) {
-        plantFolder = plantosResolveOrCreatePlantFolder_(plantsRoot, uid);
-        try { const cn = plantosCanonicalFolderName_(uid); if (plantFolder.getName() !== cn) plantFolder.setName(cn); } catch (e) {}
-        if (folderIdCol >= 0) row[folderIdCol] = plantFolder.getId();
-        if (folderUrlCol >= 0) row[folderUrlCol] = plantFolder.getUrl();
-      } else {
-        try { const cn = plantosCanonicalFolderName_(uid); if (plantFolder.getName() !== cn) plantFolder.setName(cn); } catch (e) {}
-        if (folderUrlCol >= 0 && !plantosSafeStr_(row[folderUrlCol]).trim()) row[folderUrlCol] = plantFolder.getUrl();
-      }
-      plantosEnsureSubfolder_(plantFolder, PLANTOS_BACKEND_CFG.PHOTOS_SUBFOLDER);
-      if (careDocIdCol >= 0 && !plantosSafeStr_(row[careDocIdCol]).trim()) {
-        const docFile = plantosEnsureCareDoc_(plantFolder, uid, primary);
-        row[careDocIdCol] = docFile.getId();
-        if (careDocUrlCol >= 0) row[careDocUrlCol] = docFile.getUrl();
-      } else if (careDocUrlCol >= 0 && careDocIdCol >= 0 && plantosSafeStr_(row[careDocIdCol]).trim() && !plantosSafeStr_(row[careDocUrlCol]).trim()) {
-        try { row[careDocUrlCol] = DriveApp.getFileById(String(row[careDocIdCol])).getUrl(); } catch (e) {}
-      }
-      if (qrFileIdCol >= 0 && !plantosSafeStr_(row[qrFileIdCol]).trim()) {
-        try { const qrFile = plantosEnsurePlantQr_(qrRoot, uid, primary, plantPageUrl); row[qrFileIdCol] = qrFile.getId(); if (qrUrlCol >= 0) row[qrUrlCol] = qrFile.getUrl(); } catch (e) {}
-      } else if (qrUrlCol >= 0 && qrFileIdCol >= 0 && plantosSafeStr_(row[qrFileIdCol]).trim() && !plantosSafeStr_(row[qrUrlCol]).trim()) {
-        try { row[qrUrlCol] = plantosDriveRetry_('getUrl(QR)', () => DriveApp.getFileById(String(row[qrFileIdCol])).getUrl(), 2); } catch (e) {}
-      }
-      block[i] = row;
     }
-    range.setValues(block);
+    // Write back the block — even if some rows errored, write the ones that succeeded
+    try {
+      range.setValues(block);
+      SpreadsheetApp.flush();
+    } catch (writeErr) {
+      // If batch write fails, try row-by-row
+      Logger.log('[PlantOS] Batch setValues failed, trying row-by-row: ' + writeErr);
+      for (let ri = 0; ri < block.length; ri++) {
+        try {
+          sh.getRange(start + ri, 1, 1, numCols).setValues([block[ri]]);
+        } catch (e2) {
+          errors.push('Write row ' + (start + ri) + ' failed: ' + (e2.message || e2));
+        }
+      }
+      SpreadsheetApp.flush();
+    }
     const nextCursor = end + 1;
-    if (nextCursor <= lastRow) { plantosSetSetting_(PLANTOS_BACKEND_CFG.SETTINGS_KEYS.REBUILD_CURSOR, nextCursor); return { ok: true, message: `Rebuilt rows ${start}–${end}.\nRun "Continue Rebuild" to finish.` }; }
+    const errSuffix = errors.length > 0 ? '\n\nWarnings (' + errors.length + '):\n' + errors.slice(0, 5).join('\n') + (errors.length > 5 ? '\n...' + (errors.length - 5) + ' more' : '') : '';
+    if (nextCursor <= lastRow) {
+      plantosSetSetting_(PLANTOS_BACKEND_CFG.SETTINGS_KEYS.REBUILD_CURSOR, nextCursor);
+      return { ok: true, message: 'Rebuilt ' + rebuilt + ' rows (' + start + '–' + end + ').\nRun "Continue Rebuild" to finish remaining ' + (lastRow - end) + ' rows.' + errSuffix };
+    }
     plantosSetSetting_(PLANTOS_BACKEND_CFG.SETTINGS_KEYS.REBUILD_CURSOR, '');
-    return { ok: true, message: `Rebuilt rows ${start}–${end}.\nAll done ✅` };
+    return { ok: true, message: 'Rebuilt ' + rebuilt + ' rows (' + start + '–' + end + ').\nAll done \u2705' + errSuffix };
   } catch (e) {
     return { ok: false, message: 'Rebuild failed: ' + (e && e.message ? e.message : e) + (e && e.stack ? '\n\nStack: ' + e.stack : '') };
   } finally {

@@ -5,21 +5,6 @@
 //          CarlNPCPanel, CarlHomeScreen, CarlLearnedViewer
 // ════════════════════════════════════════════════════════════════
 
-// --- Emoji font helper (pixel fonts can't render emoji) ---
-var _EMOJI_FONT = "'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif";
-function emojiSpan(text) {
-    if (typeof text !== 'string') return text;
-    var parts = text.split(/(\p{Emoji_Presentation}\uFE0F?|\p{Extended_Pictographic}\uFE0F?)/u);
-    if (parts.length <= 1) return text;
-    return parts.map(function(p, i) {
-        if (/\p{Emoji_Presentation}|\p{Extended_Pictographic}/u.test(p)) {
-            return React.createElement('span', { key: i, style: { fontFamily: _EMOJI_FONT } }, p);
-        }
-        return p;
-    });
-}
-var _PXS_EMOJI = "'Pixelify Sans','Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',cursive";
-
 // --- KB Cache & Knowledge Base Functions ---
 let _KB_CACHE = null;
 let _KB_CACHE_LOADING = false;
@@ -1820,7 +1805,7 @@ function carlOfflineTemplate_(q, plantName, genus, plant) {
 
 
 function CarlNPCPanel({ plant, pxS, theme, activeChar, setActiveChar, kbEnabled, setKbEnabled, chatId, fixedChar }) {
-    const pxSf = { fontFamily: _PXS_EMOJI };
+    const pxSf = pxS || { fontFamily: "'Pixelify Sans', cursive" };
 
     // If fixedChar is set, lock the character (ignore activeChar cycling)
     var effectiveChar = fixedChar || activeChar;
@@ -2114,10 +2099,10 @@ For follow-ups, greetings, or simple answers: immediateActions should be [] and 
         try {
             var g = trainGenus.trim() || (plant && plant.genus) || '*';
             var result = await gasCall('plantosCarlTrain', trainText, g);
-            setTrainStatus({ ok: true, msg: '✅ Carl learned ' + result.added + ' new thing' + (result.added !== 1 ? 's' : '') + '!' });
+            setTrainStatus({ ok: true, msg: '[OK] Carl learned ' + result.added + ' new thing' + (result.added !== 1 ? 's' : '') + '!' });
             setTrainText('');
         } catch(e) {
-            setTrainStatus({ ok: false, msg: '❌ ' + (e.message || 'Training failed') });
+            setTrainStatus({ ok: false, msg: '[ERR] ' + (e.message || 'Training failed') });
         }
         setTrainLoading(false);
     }
@@ -2148,7 +2133,7 @@ For follow-ups, greetings, or simple answers: immediateActions should be [] and 
         for (var i = msgIndex - 1; i >= 0; i--) {
             if (messages[i].role === 'user') { userMsg = messages[i]; break; }
         }
-        var summary = '\uD83E\uDD16 Carl Q&A\n';
+        var summary = '[Carl Q&A]\n';
         if (userMsg) summary += 'Q: ' + userMsg.text.trim() + '\n';
         summary += 'A: ' + carlMsg.text.trim();
         if (carlMsg.actions && carlMsg.actions.length > 0) {
@@ -2186,14 +2171,14 @@ For follow-ups, greetings, or simple answers: immediateActions should be [] and 
                     type: 'button',
                     onClick: function() { setTrainOpen(function(v) { return !v; }); setMissesOpen(false); },
                     title: karlTrainTitle,
-                    style: { background: trainOpen ? '#2A6018' : 'transparent', border: '1px solid #2A6018', color: '#8AC868', borderRadius: 3, padding: '3px 7px', cursor: 'pointer', fontSize: '11px', fontFamily: _PXS_EMOJI }
-                }, emojiSpan('\uD83C\uDF31 Train')),
+                    style: { background: trainOpen ? '#2A6018' : 'transparent', border: '1px solid #2A6018', color: '#8AC868', borderRadius: 3, padding: '3px 7px', cursor: 'pointer', fontSize: '11px' }
+                }, '+ Train'),
                 React.createElement('button', {
                     type: 'button',
                     onClick: function() { loadMisses(); setTrainOpen(false); },
                     title: karlGapsTitle,
-                    style: { background: missesOpen ? '#3A1A00' : 'transparent', border: '1px solid #5A3A00', color: '#B87840', borderRadius: 3, padding: '3px 7px', cursor: 'pointer', fontSize: '11px', fontFamily: _PXS_EMOJI }
-                }, emojiSpan('\uD83D\uDCCA Gaps')),
+                    style: { background: missesOpen ? '#3A1A00' : 'transparent', border: '1px solid #5A3A00', color: '#B87840', borderRadius: 3, padding: '3px 7px', cursor: 'pointer', fontSize: '11px' }
+                }, '? Gaps'),
                 React.createElement('button', {
                     type: 'button',
                     onClick: function() { setAiOnline(function(v) { return !v; }); },
@@ -2202,9 +2187,9 @@ For follow-ups, greetings, or simple answers: immediateActions should be [] and 
                         background: aiOnline ? '#1A3A5A' : '#2A1A00',
                         border: '1px solid ' + (aiOnline ? '#2A6090' : '#7A4A00'),
                         color: aiOnline ? '#70B8F0' : '#C08040',
-                        borderRadius: 3, padding: '3px 7px', cursor: 'pointer', fontSize: '11px', fontFamily: _PXS_EMOJI
+                        borderRadius: 3, padding: '3px 7px', cursor: 'pointer', fontSize: '11px'
                     }
-                }, emojiSpan(aiOnline ? '\uD83D\uDEF0 Online' : '\uD83D\uDCBB Offline')),
+                }, aiOnline ? '\u25B2 Online' : '\u25BC Offline'),
                 React.createElement('button', {
                     type: 'button',
                     onClick: function() { setKbEnabled(function(v) { return !v; }); },
@@ -2213,9 +2198,9 @@ For follow-ups, greetings, or simple answers: immediateActions should be [] and 
                         background: kbEnabled ? '#1A3A1A' : 'transparent',
                         border: '1px solid ' + (kbEnabled ? '#2A7A2A' : '#446644'),
                         color: kbEnabled ? '#80D880' : '#557755',
-                        borderRadius: 3, padding: '3px 7px', cursor: 'pointer', fontSize: '11px', fontFamily: _PXS_EMOJI
+                        borderRadius: 3, padding: '3px 7px', cursor: 'pointer', fontSize: '11px'
                     }
-                }, emojiSpan(kbEnabled ? '\uD83D\uDCD6 KB' : '\uD83D\uDCD6 KB off')),
+                }, kbEnabled ? '\u00BB KB' : '\u00BB KB off'),
                 !fixedChar && React.createElement('button', {
                     type: 'button',
                     onClick: function() { setActiveChar(function(v) { return v === 'carl' ? 'karl' : v === 'karl' ? 'rahul' : v === 'rahul' ? 'mamta' : 'carl'; }); },
@@ -2225,10 +2210,9 @@ For follow-ups, greetings, or simple answers: immediateActions should be [] and 
                         border: '1px solid ' + (isKarl ? '#CC3333' : isRahul ? '#9933CC' : isMamta ? '#CC9933' : '#553333'),
                         color: isKarl ? '#FFB0B0' : isRahul ? '#DDB0FF' : isMamta ? '#FFD0A0' : '#886666',
                         borderRadius: 3, padding: '3px 7px', cursor: 'pointer', fontSize: '11px',
-                        fontWeight: (isKarl || isRahul || isMamta) ? 700 : 400,
-                        fontFamily: _PXS_EMOJI
+                        fontWeight: (isKarl || isRahul || isMamta) ? 700 : 400
                     }
-                }, emojiSpan(isKarl ? '\uD83E\uDD2C Karl' : isRahul ? '\uD83E\uDDD1\u200D\uD83D\uDCBB Rahul' : isMamta ? '\uD83D\uDC69 Mamta' : '\uD83D\uDE07 Carl'))
+                }, isKarl ? '\u2620 Karl' : isRahul ? '\u2318 Rahul' : isMamta ? '\u2737 Mamta' : '\u2698 Carl')
             )
         ),
 
@@ -2237,7 +2221,7 @@ For follow-ups, greetings, or simple answers: immediateActions should be [] and 
             borderTop: 'none', borderBottom: 'none',
             padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8,
         }},
-            React.createElement('div', { style: Object.assign({}, px8, { fontSize: '10px', color: '#6AC848', letterSpacing: '0.08em' }) }, emojiSpan('\uD83C\uDF31 TRAIN CARL')),
+            React.createElement('div', { style: Object.assign({}, px8, { fontSize: '10px', color: '#6AC848', letterSpacing: '0.08em' }) }, '+ TRAIN CARL'),
             React.createElement('div', { style: Object.assign({}, pxSf, { fontSize: '12px', color: '#8A9A78', lineHeight: 1.5 }) },
                 'Paste a care guide, Reddit thread, article, or any plant knowledge text. Carl will extract and remember the facts automatically.'
             ),
@@ -2261,7 +2245,7 @@ For follow-ups, greetings, or simple answers: immediateActions should be [] and 
                     disabled: trainLoading || !trainText.trim(),
                     style: Object.assign({}, px8, { fontSize: '10px', background: trainLoading ? '#1A4010' : '#2A6018', color: '#C8E8A8', border: '2px solid #4A9838', padding: '7px 14px', cursor: 'pointer', letterSpacing: '0.06em' })
                 }, trainLoading ? 'TRAINING...' : 'TRAIN CARL'),
-                trainStatus && React.createElement('div', { style: Object.assign({}, pxSf, { fontSize: '12px', color: trainStatus.ok ? '#6AC848' : '#E06050' }) }, emojiSpan(trainStatus.msg))
+                trainStatus && React.createElement('div', { style: Object.assign({}, pxSf, { fontSize: '12px', color: trainStatus.ok ? '#6AC848' : '#E06050' }) }, trainStatus.msg)
             )
         ),
 
@@ -2270,7 +2254,7 @@ For follow-ups, greetings, or simple answers: immediateActions should be [] and 
             borderTop: 'none', borderBottom: 'none',
             padding: '10px 12px', maxHeight: 180, overflowY: 'auto',
         }},
-            React.createElement('div', { style: Object.assign({}, px8, { fontSize: '10px', color: '#C87840', letterSpacing: '0.08em', marginBottom: 6 }) }, emojiSpan('\uD83D\uDCCA WHAT CARL DOESN\'T KNOW YET')),
+            React.createElement('div', { style: Object.assign({}, px8, { fontSize: '10px', color: '#C87840', letterSpacing: '0.08em', marginBottom: 6 }) }, '? WHAT CARL DOESN\'T KNOW YET'),
             misses === null
                 ? React.createElement('div', { style: Object.assign({}, pxSf, { fontSize: '12px', color: '#8A7060' }) }, 'Loading...')
                 : misses.length === 0
@@ -2300,7 +2284,7 @@ For follow-ups, greetings, or simple answers: immediateActions should be [] and 
         }},
 
             isEmpty && React.createElement('div', { style: { textAlign: 'center', opacity: 0.6 } },
-                React.createElement('div', { style: { fontSize: 28, marginBottom: 6 } }, '\uD83C\uDF3F'),
+                React.createElement('div', { style: Object.assign({}, px8, { fontSize: '18px', marginBottom: 6, color: '#5A8A38' }) }, '\u2698'),
                 React.createElement('div', { style: Object.assign({}, pxSf, { fontSize: '12px', color: '#7A5A30', lineHeight: 1.5 }) },
                     'Ask about diagnosis, care, pests, propagation, toxicity\u2026'
                 )
@@ -2319,7 +2303,7 @@ For follow-ups, greetings, or simple answers: immediateActions should be [] and 
                         border: '3px solid ' + (isUser ? '#1A3A08' : '#C8A85A'),
                         boxShadow: isUser ? 'none' : '3px 3px 0 #8A6A2A',
                         color: isUser ? '#D0F0A8' : '#2C1000',
-                        fontFamily: _PXS_EMOJI,
+                        fontFamily: "'Pixelify Sans', cursive",
                         fontSize: fontSize_msg, lineHeight: 1.6,
                     }},
                         msg.loading
@@ -2344,7 +2328,7 @@ For follow-ups, greetings, or simple answers: immediateActions should be [] and 
                         React.createElement('div', { style: Object.assign({}, pxSf, {
                             maxWidth: '78%', fontSize: fontSize_act, color: '#7A5A30',
                             fontStyle: 'italic', paddingLeft: 4,
-                        }) }, emojiSpan('\uD83D\uDC41 ' + msg.watch)),
+                        }) }, '\u25C9 ' + msg.watch),
                     !isUser && !msg.loading && msg._source &&
                         React.createElement('div', { style: {
                             alignSelf: 'flex-end', fontSize: '10px', opacity: 0.45,
@@ -2367,7 +2351,7 @@ For follow-ups, greetings, or simple answers: immediateActions should be [] and 
                                         borderRadius: 2, padding: '2px 7px',
                                         cursor: 'pointer', opacity: 0.75,
                                     })
-                                  }, emojiSpan('\uD83D\uDCDD save to diary'))
+                                  }, '\u25A0 save to diary')
                         )
                 );
             }),
@@ -2418,21 +2402,21 @@ For follow-ups, greetings, or simple answers: immediateActions should be [] and 
 // ═══════════════════════════════════════════════════════════════════════════
 
 var CHAT_CHARACTERS = {
-    carl:  { id: 'carl',  name: 'Carl',  emoji: '\uD83C\uDF3F', color: '#5A8A38', headerBg: 'linear-gradient(135deg, #0E1A08, #1A2A10)', border: '#3A6A28', tagline: 'Plant Expert · The reasonable one', bubbleBg: '#E8F5E0', bubbleColor: '#1A3A08' },
-    karl:  { id: 'karl',  name: 'Karl',  emoji: '\uD83E\uDD2C', color: '#CC3333', headerBg: 'linear-gradient(135deg, #2A0A0A, #1A0000)', border: '#8A2222', tagline: 'Jersey wiseguy · Trapped in your phone', bubbleBg: '#FFE8E8', bubbleColor: '#3A0808' },
-    rahul: { id: 'rahul', name: 'Rahul', emoji: '\uD83E\uDDD1\u200D\uD83D\uDCBB', color: '#9933CC', headerBg: 'linear-gradient(135deg, #1A0A2A, #0E0018)', border: '#6A3A8A', tagline: 'Mumbai boy · Homesick · Very not gord', bubbleBg: '#F3E8FF', bubbleColor: '#1A0A2A' },
-    mamta: { id: 'mamta', name: 'Mamta', emoji: '\uD83D\uDC69', color: '#CC9933', headerBg: 'linear-gradient(135deg, #2A1A0A, #1A0E00)', border: '#8A6A22', tagline: 'Big Mamta · Confused · WHERE IS RAHUL', bubbleBg: '#FFF5E0', bubbleColor: '#2A1A0A' },
+    carl:  { id: 'carl',  name: 'Carl',  emoji: '\u2698', color: '#5A8A38', headerBg: 'linear-gradient(135deg, #0E1A08, #1A2A10)', border: '#3A6A28', tagline: 'Plant Expert · The reasonable one', bubbleBg: '#E8F5E0', bubbleColor: '#1A3A08' },
+    karl:  { id: 'karl',  name: 'Karl',  emoji: '\u2620', color: '#CC3333', headerBg: 'linear-gradient(135deg, #2A0A0A, #1A0000)', border: '#8A2222', tagline: 'Jersey wiseguy · Trapped in your phone', bubbleBg: '#FFE8E8', bubbleColor: '#3A0808' },
+    rahul: { id: 'rahul', name: 'Rahul', emoji: '\u2318', color: '#9933CC', headerBg: 'linear-gradient(135deg, #1A0A2A, #0E0018)', border: '#6A3A8A', tagline: 'Mumbai boy · Homesick · Very not gord', bubbleBg: '#F3E8FF', bubbleColor: '#1A0A2A' },
+    mamta: { id: 'mamta', name: 'Mamta', emoji: '\u2737', color: '#CC9933', headerBg: 'linear-gradient(135deg, #2A1A0A, #1A0E00)', border: '#8A6A22', tagline: 'Big Mamta · Confused · WHERE IS RAHUL', bubbleBg: '#FFF5E0', bubbleColor: '#2A1A0A' },
 };
 
 var CHAT_PRESET_GROUPS = [
-    { id: 'group_chaos',      name: 'Chaos Duo',      emoji: '\uD83D\uDD25', members: ['karl', 'rahul'], color: '#E85030', tagline: 'Karl + Rahul — maximum chaos energy' },
-    { id: 'group_roast',      name: 'Roast Central',   emoji: '\uD83C\uDF36',  members: ['karl', 'mamta'], color: '#D08030', tagline: 'Karl + Mamta — unstoppable roasting' },
-    { id: 'group_greenhouse', name: 'The Greenhouse',  emoji: '\uD83C\uDFE1', members: ['carl', 'karl', 'rahul', 'mamta'], color: '#5A8A38', tagline: 'All four — absolute greenhouse chaos' },
+    { id: 'group_chaos',      name: 'Chaos Duo',      emoji: '\u2622', members: ['karl', 'rahul'], color: '#E85030', tagline: 'Karl + Rahul — maximum chaos energy' },
+    { id: 'group_roast',      name: 'Roast Central',   emoji: '\u2604', members: ['karl', 'mamta'], color: '#D08030', tagline: 'Karl + Mamta — unstoppable roasting' },
+    { id: 'group_greenhouse', name: 'The Greenhouse',  emoji: '\u2302', members: ['carl', 'karl', 'rahul', 'mamta'], color: '#5A8A38', tagline: 'All four — absolute greenhouse chaos' },
 ];
 
 // --- GroupChatPanel ---
 function GroupChatPanel({ group, plant, theme }) {
-    var pxSf = { fontFamily: _PXS_EMOJI };
+    var pxSf = { fontFamily: "'Pixelify Sans', cursive" };
     var _m = React.useState([]), messages = _m[0], setMessages = _m[1];
     var _i = React.useState(''), input = _i[0], setInput = _i[1];
     var _l = React.useState(false), loading = _l[0], setLoading = _l[1];
@@ -2553,11 +2537,11 @@ function GroupChatPanel({ group, plant, theme }) {
             background: 'linear-gradient(135deg, #1A1A08, #0E1808)',
             borderBottom: '2px solid ' + (group.color || '#3A6A28'),
         }},
-            React.createElement('div', { style: { fontSize: 24 } }, group.emoji),
+            React.createElement('div', { style: Object.assign({}, px8, { fontSize: '14px' }) }, group.emoji),
             React.createElement('div', { style: { flex: 1 } },
                 React.createElement('div', { style: Object.assign({}, px8, { fontSize: '12px', color: group.color || '#C8A84B', letterSpacing: '0.06em' }) }, group.name.toUpperCase()),
                 React.createElement('div', { style: Object.assign({}, pxSf, { fontSize: '11px', color: '#8A9A78' }) },
-                    emojiSpan(members.map(function(m) { return (CHAT_CHARACTERS[m] || {}).emoji || '\uD83C\uDF3F'; }).join(' ') + ' ' + members.map(function(m) { return (CHAT_CHARACTERS[m] || {}).name || m; }).join(', '))
+                    members.map(function(m) { return (CHAT_CHARACTERS[m] || {}).emoji || '\u2698'; }).join(' ') + ' ' + members.map(function(m) { return (CHAT_CHARACTERS[m] || {}).name || m; }).join(', ')
                 )
             )
         ),
@@ -2569,7 +2553,7 @@ function GroupChatPanel({ group, plant, theme }) {
             display: 'flex', flexDirection: 'column', gap: 8,
         }},
             messages.length === 0 && React.createElement('div', { style: { textAlign: 'center', opacity: 0.5, padding: '40px 20px' } },
-                React.createElement('div', { style: { fontSize: 32, marginBottom: 8 } }, group.emoji),
+                React.createElement('div', { style: Object.assign({}, px8, { fontSize: '18px', marginBottom: 8 }) }, group.emoji),
                 React.createElement('div', { style: Object.assign({}, pxSf, { fontSize: '12px', color: '#7A5A30' }) }, group.tagline)
             ),
 
@@ -2582,14 +2566,14 @@ function GroupChatPanel({ group, plant, theme }) {
                 }},
                     !isUser && charCfg && React.createElement('div', { style: Object.assign({}, pxSf, {
                         fontSize: '10px', color: charCfg.color, fontWeight: 700, paddingLeft: 4,
-                    }) }, emojiSpan(charCfg.emoji + ' ' + charCfg.name)),
+                    }) }, charCfg.emoji + ' ' + charCfg.name),
                     React.createElement('div', { style: {
                         maxWidth: '78%', padding: '8px 12px',
                         background: isUser ? '#2E5A1A' : (charCfg ? charCfg.bubbleBg : '#FFFDF0'),
                         border: '3px solid ' + (isUser ? '#1A3A08' : (charCfg ? charCfg.border : '#C8A85A')),
                         boxShadow: isUser ? 'none' : '2px 2px 0 ' + (charCfg ? charCfg.border + '40' : '#8A6A2A'),
                         color: isUser ? '#D0F0A8' : (charCfg ? charCfg.bubbleColor : '#2C1000'),
-                        fontFamily: _PXS_EMOJI,
+                        fontFamily: "'Pixelify Sans', cursive",
                         fontSize: fontSize_msg, lineHeight: 1.6,
                     }},
                         msg.error
@@ -2655,7 +2639,7 @@ function ChatConversationScreen({ chatTarget, onBack, plant }) {
     var headerBg = isDM ? (charCfg.headerBg || 'linear-gradient(135deg, #0E1A08, #1A2A10)') : 'linear-gradient(135deg, #1A1A08, #0E1808)';
     var headerBorder = isDM ? (charCfg.border || '#3A6A28') : (groupCfg ? groupCfg.color : '#3A6A28');
     var headerName = isDM ? (charCfg.name || 'Carl').toUpperCase() : (groupCfg ? groupCfg.name.toUpperCase() : 'CHAT');
-    var headerEmoji = isDM ? (charCfg.emoji || '\uD83C\uDF3F') : (groupCfg ? groupCfg.emoji : '\uD83D\uDCAC');
+    var headerEmoji = isDM ? (charCfg.emoji || '\u2698') : (groupCfg ? groupCfg.emoji : '\u00BB');
 
     return React.createElement('div', { style: {
         display: 'flex', flexDirection: 'column', height: '100vh', maxHeight: '100vh',
@@ -2675,7 +2659,7 @@ function ChatConversationScreen({ chatTarget, onBack, plant }) {
                 color: '#C8C8C8',
             }) }, '\u2190'),
             isDM && React.createElement(CarlBust, { px: 3, persona: chatTarget.charId }),
-            !isDM && React.createElement('div', { style: { fontSize: 24 } }, headerEmoji),
+            !isDM && React.createElement('div', { style: Object.assign({}, px8, { fontSize: '14px' }) }, headerEmoji),
             React.createElement('div', { style: { flex: 1 } },
                 React.createElement('div', { style: Object.assign({}, px8, { fontSize: '12px', color: isDM ? (charCfg && charCfg.color || '#5A8A38') : (groupCfg ? groupCfg.color : '#C8A84B'), letterSpacing: '0.06em' }) }, headerName),
                 React.createElement('div', { style: Object.assign({}, pxS, { fontSize: '11px', color: '#8A9A78' }) },
@@ -2808,13 +2792,13 @@ function CarlHomeScreen() {
             }
         },
             // Avatar
-            props.avatar || React.createElement('div', { style: {
-                width: 44, height: 44, borderRadius: '50%',
+            props.avatar || React.createElement('div', { style: Object.assign({}, px8, {
+                width: 44, height: 44, borderRadius: 0,
                 background: props.color ? props.color + '22' : '#1A2A1222',
                 border: '2px solid ' + (props.color || theme.cardBorder),
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 22, flexShrink: 0,
-            } }, props.emoji),
+                fontSize: '16px', flexShrink: 0, color: props.color || theme.txtP,
+            }) }, props.emoji),
             // Text
             React.createElement('div', { style: { flex: 1, minWidth: 0 } },
                 React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 2 } },
@@ -2854,7 +2838,7 @@ function CarlHomeScreen() {
             flexShrink: 0,
         }},
             React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 } },
-                React.createElement('div', { style: { fontSize: 26 } }, '\uD83D\uDCAC'),
+                React.createElement('div', { style: Object.assign({}, px8, { fontSize: '16px', color: '#A8D88C' }) }, '\u00BB'),
                 React.createElement('div', { style: { flex: 1 } },
                     React.createElement('div', { style: Object.assign({}, px8, { fontSize: '12px', color: '#A8D88C', letterSpacing: '0.08em' }) }, 'THE GREENHOUSE'),
                     React.createElement('div', { style: Object.assign({}, pxS, { fontSize: '12px', color: '#6A8A58' }) }, 'Messages')
@@ -2918,7 +2902,7 @@ function CarlHomeScreen() {
                         border: '1px dashed ' + theme.cardBorder, padding: '6px 14px',
                         cursor: 'pointer', borderRadius: 4,
                     })
-                }, '\uD83C\uDF3F Classic Carl (plant picker mode)')
+                }, '\u2698 Classic Carl (plant picker mode)')
             )
         )
     );
@@ -2952,9 +2936,9 @@ function HubPlantPicker({ selectedPlant, setSelectedPlant, theme }) {
                 color: selectedPlant ? '#A8E89C' : '#8A9A78',
                 cursor: 'pointer', borderRadius: 3,
             })
-        }, emojiSpan(selectedPlant
-            ? '\uD83C\uDF3F ' + (selectedPlant.nickname || selectedPlant.genus || 'Plant')
-            : '\uD83C\uDF3F Pick a plant for context')),
+        }, selectedPlant
+            ? '\u2698 ' + (selectedPlant.nickname || selectedPlant.genus || 'Plant')
+            : '\u2698 Pick a plant for context'),
         open && React.createElement('div', { style: {
             marginTop: 6, background: 'rgba(0,0,0,0.4)', border: '1px solid ' + theme.cardBorder,
             borderRadius: 4, padding: 6, maxHeight: 160, overflowY: 'auto',
@@ -3045,7 +3029,7 @@ function CarlClassicScreen() {
                 border: '2px solid ' + (selectedPlant ? '#2E7A2E' : theme.cardBorder),
                 color: selectedPlant ? '#A8E89C' : theme.txtS,
                 maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            }) }, emojiSpan(selectedPlant ? '\uD83C\uDF3F ' + (selectedPlant.nickname || selectedPlant.genus || 'Plant') : '\uD83C\uDF3F Pick a plant'))
+            }) }, selectedPlant ? '\u2698 ' + (selectedPlant.nickname || selectedPlant.genus || 'Plant') : '\u2698 Pick a plant')
         ),
         pickOpen && React.createElement('div', { style: {
             background: theme.cardBg, border: '2px solid ' + theme.cardBorder,

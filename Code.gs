@@ -2978,6 +2978,93 @@ function chatSetRelScore(pair, score) {
   } catch(e) { return { ok: false, error: e.message }; }
 }
 
+/* Read receipts: track when messages were delivered and read */
+function chatMarkRead(chatId) {
+  try {
+    var key = 'chat_read_' + plantosSafeStr_(String(chatId));
+    var ts = new Date().toISOString();
+    PropertiesService.getUserProperties().setProperty(key, ts);
+    // Also clear unread flags from history
+    var histKey = 'chat_' + plantosSafeStr_(String(chatId));
+    var histVal = PropertiesService.getUserProperties().getProperty(histKey);
+    if (histVal) {
+      var msgs = JSON.parse(histVal);
+      var changed = false;
+      for (var i = 0; i < msgs.length; i++) {
+        if (msgs[i].unread) { msgs[i].unread = false; changed = true; }
+      }
+      if (changed) PropertiesService.getUserProperties().setProperty(histKey, JSON.stringify(msgs));
+    }
+    return { ok: true, readAt: ts };
+  } catch(e) { return { ok: false, error: e.message }; }
+}
+
+function chatGetReadReceipt(chatId) {
+  try {
+    var key = 'chat_read_' + plantosSafeStr_(String(chatId));
+    var ts = PropertiesService.getUserProperties().getProperty(key);
+    return { ok: true, readAt: ts || null };
+  } catch(e) { return { ok: true, readAt: null }; }
+}
+
+function chatSaveDeliveryTimestamp(chatId, messageIndex) {
+  try {
+    var key = 'chat_delivered_' + plantosSafeStr_(String(chatId));
+    var val = PropertiesService.getUserProperties().getProperty(key);
+    var deliveries = val ? JSON.parse(val) : {};
+    deliveries[String(messageIndex)] = new Date().toISOString();
+    // Keep only last 30 entries
+    var keys = Object.keys(deliveries);
+    if (keys.length > 30) {
+      var sorted = keys.sort(function(a,b) { return Number(a) - Number(b); });
+      for (var i = 0; i < sorted.length - 30; i++) delete deliveries[sorted[i]];
+    }
+    PropertiesService.getUserProperties().setProperty(key, JSON.stringify(deliveries));
+    return { ok: true };
+  } catch(e) { return { ok: false }; }
+}
+
+/* Cross-conversation emotional memory: stores notable emotional events so
+   characters can reference what happened in other chats. */
+function chatLogEmotionalEvent(charId, emotion, summary, sourceChatId) {
+  try {
+    var key = 'chat_emotions';
+    var val = PropertiesService.getUserProperties().getProperty(key);
+    var events = val ? JSON.parse(val) : [];
+    events.push({
+      charId: plantosSafeStr_(String(charId)),
+      emotion: plantosSafeStr_(String(emotion)),     // e.g. 'insulted', 'praised', 'loved', 'roasted'
+      summary: plantosSafeStr_(String(summary)).substring(0, 200),
+      source: plantosSafeStr_(String(sourceChatId)),
+      ts: new Date().toISOString()
+    });
+    // Keep last 30 events
+    if (events.length > 30) events = events.slice(events.length - 30);
+    PropertiesService.getUserProperties().setProperty(key, JSON.stringify(events));
+    return { ok: true };
+  } catch(e) { return { ok: false, error: e.message }; }
+}
+
+function chatGetEmotionalContext(charId) {
+  try {
+    var key = 'chat_emotions';
+    var val = PropertiesService.getUserProperties().getProperty(key);
+    if (!val) return { ok: true, events: [] };
+    var all = JSON.parse(val);
+    var charEvents = all.filter(function(e) { return e.charId === plantosSafeStr_(String(charId)); });
+    // Return last 5 relevant events, most recent first
+    return { ok: true, events: charEvents.slice(-5).reverse() };
+  } catch(e) { return { ok: true, events: [] }; }
+}
+
+function chatGetAllEmotionalContext() {
+  try {
+    var key = 'chat_emotions';
+    var val = PropertiesService.getUserProperties().getProperty(key);
+    return { ok: true, events: val ? JSON.parse(val) : [] };
+  } catch(e) { return { ok: true, events: [] }; }
+}
+
 function chatGenerateLatinNarration(karlText, mamtaText) {
   try {
     var key = PropertiesService.getUserProperties().getProperty('ANTHROPIC_API_KEY');

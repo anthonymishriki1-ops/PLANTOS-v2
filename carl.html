@@ -1804,7 +1804,7 @@ function carlOfflineTemplate_(q, plantName, genus, plant) {
 }
 
 
-function CarlNPCPanel({ plant, pxS, theme, activeChar, setActiveChar, kbEnabled, setKbEnabled, chatId, fixedChar }) {
+function CarlNPCPanel({ plant, pxS, theme, activeChar, setActiveChar, kbEnabled, setKbEnabled, chatId, fixedChar, emotionalEvents, onEmotionalEvent }) {
     const pxSf = pxS || { fontFamily: "'Pixelify Sans', cursive" };
 
     // If fixedChar is set, lock the character (ignore activeChar cycling)
@@ -1838,6 +1838,8 @@ function CarlNPCPanel({ plant, pxS, theme, activeChar, setActiveChar, kbEnabled,
                 setTimeout(function() { if (bottomRef.current) bottomRef.current.scrollIntoView({ behavior: 'auto' }); }, 80);
             }
         }).catch(function(){}).finally(function(){ setChatHistoryLoading(false); });
+        // Mark conversation as read
+        if (chatId) { gasCall('chatMarkRead', chatId).catch(function(){}); }
     }, [historyKey]);
 
     function buildPlantContext() {
@@ -1887,9 +1889,11 @@ function CarlNPCPanel({ plant, pxS, theme, activeChar, setActiveChar, kbEnabled,
     var karlGapsTitle   = isKarl ? "See what Karl still don't know" : isRahul ? "See what Rahul doesn't know yet" : isMamta ? "She doesn't WANT to know" : "See what Carl doesn't know yet";
     var karlHeaderBg    = isKarl ? 'linear-gradient(90deg, #2A0A0A, #1A0000)' : isRahul ? 'linear-gradient(90deg, #1A0A2A, #0E0018)' : isMamta ? 'linear-gradient(90deg, #2A1A0A, #1A0E00)' : 'linear-gradient(90deg, #1A2A12, #0E1808)';
     var karlHeaderBorder = isKarl ? '#8A2222' : isRahul ? '#6A3A8A' : isMamta ? '#8A6A22' : theme.cardBorder;
-    var karlChatBg      = isKarl ? '#FFF0F0' : isRahul ? '#F5F0FF' : isMamta ? '#FFF5E8' : '#F5EFD8';
+    var karlChatBg      = isKarl ? '#120808' : isRahul ? '#0E0818' : isMamta ? '#140E04' : '#0A0E06';
 
-    const SYSTEM = CHAR_SYSTEM + `
+    var _emoCtx = (typeof buildEmotionalContext === 'function' && emotionalEvents) ? buildEmotionalContext(effectiveChar, emotionalEvents) : '';
+
+    const SYSTEM = CHAR_SYSTEM + _emoCtx + `
 
 TODAY'S DATE: ${_todayStr}. Use this as ground truth for any date or schedule calculations — overdue checks, last watered gaps, upcoming care, all of it.
 
@@ -1946,6 +1950,14 @@ For follow-ups, greetings, or simple answers: immediateActions should be [] and 
         var prevMessages = messages.slice();
 
         setMessages(function(prev) { return prev.concat({ role: 'user', text: text, ts: new Date().toISOString() }); });
+
+        // Detect emotional events for cross-chat memory
+        if (typeof detectEmotion === 'function' && onEmotionalEvent && effectiveChar) {
+            var _emo = detectEmotion(text, effectiveChar);
+            if (_emo && _emo.intensity >= 1) {
+                onEmotionalEvent(effectiveChar, _emo.emotion, text.substring(0, 100), chatId || 'dm_' + effectiveChar);
+            }
+        }
 
         // --- Offline mode: full conversation layer, no AI ---
         if (!aiOnline) {
@@ -2283,15 +2295,25 @@ For follow-ups, greetings, or simple answers: immediateActions should be [] and 
             display: 'flex', flexDirection: 'column', gap: 8,
         }},
 
-            isEmpty && React.createElement('div', { style: { textAlign: 'center', opacity: 0.6 } },
-                React.createElement('div', { style: { fontSize: 28, marginBottom: 6 } }, '\uD83C\uDF3F'),
-                React.createElement('div', { style: Object.assign({}, pxSf, { fontSize: '12px', color: '#7A5A30', lineHeight: 1.5 }) },
-                    'Ask about diagnosis, care, pests, propagation, toxicity\u2026'
-                )
+            isEmpty && React.createElement('div', { style: { textAlign: 'center', padding: '20px 10px' } },
+                typeof RPGFrame !== 'undefined'
+                    ? React.createElement(RPGFrame, { borderColor: CHAT_CHARACTERS[effectiveChar] ? CHAT_CHARACTERS[effectiveChar].border : '#5A8A38', style: { textAlign: 'center' } },
+                        React.createElement(CarlBust, { px: 3, persona: effectiveChar }),
+                        React.createElement('div', { style: Object.assign({}, pxSf, { fontSize: '12px', color: '#8A9A78', lineHeight: 1.5, marginTop: 6 }) },
+                            'Ask about diagnosis, care, pests, propagation, toxicity\u2026'
+                        )
+                    )
+                    : React.createElement('div', null,
+                        React.createElement('div', { style: { fontSize: 28, marginBottom: 6 } }, '\uD83C\uDF3F'),
+                        React.createElement('div', { style: Object.assign({}, pxSf, { fontSize: '12px', color: '#8A9A78', lineHeight: 1.5 }) },
+                            'Ask about diagnosis, care, pests, propagation, toxicity\u2026'
+                        )
+                    )
             ),
 
             messages.map(function(msg, i) {
                 var isUser = msg.role === 'user';
+                var isLastUserMsg = isUser && (function() { for (var j = i + 1; j < messages.length; j++) { if (messages[j].role === 'user') return false; } return true; })();
                 return React.createElement('div', { key: i, style: {
                     display: 'flex', flexDirection: 'column',
                     alignItems: isUser ? 'flex-end' : 'flex-start',
@@ -2299,10 +2321,12 @@ For follow-ups, greetings, or simple answers: immediateActions should be [] and 
                 }},
                     React.createElement('div', { style: {
                         maxWidth: '78%', padding: '9px 13px',
-                        background: isUser ? '#2E5A1A' : '#FFFDF0',
-                        border: '3px solid ' + (isUser ? '#1A3A08' : '#C8A85A'),
-                        boxShadow: isUser ? 'none' : '3px 3px 0 #8A6A2A',
-                        color: isUser ? '#D0F0A8' : '#2C1000',
+                        background: isUser ? '#1A2A0E' : (CHAT_CHARACTERS[effectiveChar] ? CHAT_CHARACTERS[effectiveChar].bubbleBg : '#0E0E08'),
+                        border: '3px solid ' + (isUser ? '#4A8A2A' : (CHAT_CHARACTERS[effectiveChar] ? CHAT_CHARACTERS[effectiveChar].border : '#5A5A3A')),
+                        borderTop: '3px solid ' + (isUser ? '#6AAA4A' : (CHAT_CHARACTERS[effectiveChar] ? adjustHex(CHAT_CHARACTERS[effectiveChar].border, 20) : '#7A7A5A')),
+                        borderLeft: '3px solid ' + (isUser ? '#6AAA4A' : (CHAT_CHARACTERS[effectiveChar] ? adjustHex(CHAT_CHARACTERS[effectiveChar].border, 20) : '#7A7A5A')),
+                        boxShadow: isUser ? '2px 2px 0 #00000040' : '2px 2px 0 #00000060',
+                        color: isUser ? '#C8E8A8' : (CHAT_CHARACTERS[effectiveChar] ? CHAT_CHARACTERS[effectiveChar].bubbleColor : '#C8C8B8'),
                         fontFamily: "'Pixelify Sans', cursive",
                         fontSize: fontSize_msg, lineHeight: 1.6,
                     }},
@@ -2312,21 +2336,22 @@ For follow-ups, greetings, or simple answers: immediateActions should be [] and 
                                 ? React.createElement('span', { style: { color: '#B83030' } }, '\u26A0 ' + msg.text)
                                 : React.createElement('span', null, msg.text)
                     ),
+                    typeof MsgTimestamp !== 'undefined' && !msg.loading && React.createElement(MsgTimestamp, { ts: msg.ts, isUser: isUser, isLast: isLastUserMsg }),
                     !isUser && !msg.loading && msg.actions && msg.actions.length > 0 &&
                         React.createElement('div', { style: {
                             maxWidth: '90%', padding: '6px 10px',
-                            background: '#F0F8E8', border: '2px solid #8ABE68',
+                            background: '#0A1808', border: '2px solid #3A6A28',
                             borderLeft: '4px solid #2A7A18',
                         }},
                             msg.actions.map(function(a, ai) {
                                 return React.createElement('div', { key: ai, style: Object.assign({}, pxSf, {
-                                    fontSize: fontSize_act, color: '#1A3A08', paddingBottom: ai < msg.actions.length - 1 ? 5 : 0,
+                                    fontSize: fontSize_act, color: '#A8D888', paddingBottom: ai < msg.actions.length - 1 ? 5 : 0,
                                 }) }, (ai + 1) + '. ' + a);
                             })
                         ),
                     !isUser && !msg.loading && msg.watch &&
                         React.createElement('div', { style: Object.assign({}, pxSf, {
-                            maxWidth: '78%', fontSize: fontSize_act, color: '#7A5A30',
+                            maxWidth: '78%', fontSize: fontSize_act, color: '#A8886A',
                             fontStyle: 'italic', paddingLeft: 4,
                         }) }, '\uD83D\uDC41 ' + msg.watch),
                     !isUser && !msg.loading && msg._source &&
@@ -2338,16 +2363,16 @@ For follow-ups, greetings, or simple answers: immediateActions should be [] and 
                     !isUser && !msg.loading && !msg.error && msg.text && plant && plant.uid &&
                         React.createElement('div', { style: { alignSelf: 'flex-start', marginTop: 2 } },
                             savedMsgs[i] === true
-                                ? React.createElement('span', { style: Object.assign({}, pxSf, { fontSize: '11px', color: '#4A8030', opacity: 0.8 }) }, '\u2714 Saved to diary')
+                                ? React.createElement('span', { style: Object.assign({}, pxSf, { fontSize: '11px', color: '#6AAA48', opacity: 0.8 }) }, '\u2714 Saved to diary')
                                 : savedMsgs[i] === 'err'
-                                ? React.createElement('span', { style: Object.assign({}, pxSf, { fontSize: '11px', color: '#B83030' }) }, '\u26A0 Save failed')
+                                ? React.createElement('span', { style: Object.assign({}, pxSf, { fontSize: '11px', color: '#E85050' }) }, '\u26A0 Save failed')
                                 : React.createElement('button', {
                                     type: 'button',
                                     onClick: function(msgIdx) { return function() { saveToDiary(msgIdx); }; }(i),
                                     style: Object.assign({}, pxSf, {
-                                        fontSize: '11px', color: '#7A5A30',
+                                        fontSize: '11px', color: '#8A9A78',
                                         background: 'transparent',
-                                        border: '1px dashed #C8A85A',
+                                        border: '1px dashed #4A6A38',
                                         borderRadius: 2, padding: '2px 7px',
                                         cursor: 'pointer', opacity: 0.75,
                                     })
@@ -2359,53 +2384,78 @@ For follow-ups, greetings, or simple answers: immediateActions should be [] and 
             React.createElement('div', { ref: bottomRef })
         ),
 
-        React.createElement('div', { style: {
-            display: 'flex', gap: 0, flexShrink: 0,
-            border: '2px solid ' + theme.cardBorder,
-            background: theme.rowBg,
-        }},
-            React.createElement('textarea', {
-                value: input,
-                onChange: function(e) { setInput(e.target.value); },
-                onKeyDown: handleKey,
-                onTouchEnd: function(e) { e.target.focus(); },
-                placeholder: karlPlaceholder,
-                rows: 2,
-                style: Object.assign({}, pxSf, {
-                    flex: 1, fontSize: '16px', padding: '8px 10px',
-                    border: 'none', outline: 'none', resize: 'none',
-                    background: 'transparent', color: theme.txtP,
-                    lineHeight: 1.4,
+        typeof RPGFrame !== 'undefined'
+            ? React.createElement(RPGFrame, { borderColor: CHAT_CHARACTERS[effectiveChar] ? CHAT_CHARACTERS[effectiveChar].border : '#3A5A28', bgColor: '#060A04', noPad: true, style: { flexShrink: 0, display: 'flex', margin: '0 2px 2px' } },
+                React.createElement('textarea', {
+                    value: input,
+                    onChange: function(e) { setInput(e.target.value); },
+                    onKeyDown: handleKey,
+                    onTouchEnd: function(e) { e.target.focus(); },
+                    placeholder: karlPlaceholder,
+                    rows: 2,
+                    style: Object.assign({}, pxSf, {
+                        flex: 1, fontSize: '16px', padding: '8px 10px',
+                        border: 'none', outline: 'none', resize: 'none',
+                        background: 'transparent', color: '#C8E8A8',
+                        lineHeight: 1.4,
+                    })
+                }),
+                React.createElement(PixelBtn, {
+                    label: loading ? '\u231B' : 'SEND',
+                    onClick: sendMessage,
+                    disabled: loading || !input.trim(),
+                    color: CHAT_CHARACTERS[effectiveChar] ? adjustHex(CHAT_CHARACTERS[effectiveChar].border, -20) : '#2E6A1A',
+                    style: { margin: 4, alignSelf: 'stretch', minWidth: 56 },
                 })
-            }),
-            React.createElement('button', {
-                type: 'button',
-                onClick: sendMessage,
-                onTouchEnd: function(e) { e.preventDefault(); sendMessage(); },
-                disabled: loading || !input.trim(),
-                style: Object.assign({}, px8, {
-                    fontSize: '14px', padding: '0 16px', cursor: loading ? 'wait' : 'pointer',
-                    border: 'none', borderLeft: '2px solid ' + theme.cardBorder,
-                    background: loading ? theme.rowBg : '#2E5A1A',
-                    color: loading ? theme.txtS : '#D0F0A8',
-                    flexShrink: 0, lineHeight: 1.4,
-                    minHeight: 44, minWidth: 48,
-                    opacity: (!input.trim() && !loading) ? 0.5 : 1,
-                })
-            }, loading ? '\u231B' : 'SEND')
-        )
+            )
+            : React.createElement('div', { style: {
+                display: 'flex', gap: 0, flexShrink: 0,
+                border: '2px solid ' + theme.cardBorder,
+                background: '#060A04',
+            }},
+                React.createElement('textarea', {
+                    value: input,
+                    onChange: function(e) { setInput(e.target.value); },
+                    onKeyDown: handleKey,
+                    onTouchEnd: function(e) { e.target.focus(); },
+                    placeholder: karlPlaceholder,
+                    rows: 2,
+                    style: Object.assign({}, pxSf, {
+                        flex: 1, fontSize: '16px', padding: '8px 10px',
+                        border: 'none', outline: 'none', resize: 'none',
+                        background: 'transparent', color: '#C8E8A8',
+                        lineHeight: 1.4,
+                    })
+                }),
+                React.createElement('button', {
+                    type: 'button',
+                    onClick: sendMessage,
+                    onTouchEnd: function(e) { e.preventDefault(); sendMessage(); },
+                    disabled: loading || !input.trim(),
+                    style: Object.assign({}, px8, {
+                        fontSize: '14px', padding: '0 16px', cursor: loading ? 'wait' : 'pointer',
+                        border: 'none', borderLeft: '2px solid #3A5A28',
+                        background: loading ? '#0A0E06' : '#2E5A1A',
+                        color: loading ? '#5A6A48' : '#D0F0A8',
+                        flexShrink: 0, lineHeight: 1.4,
+                        minHeight: 44, minWidth: 48,
+                        opacity: (!input.trim() && !loading) ? 0.5 : 1,
+                    })
+                }, loading ? '\u231B' : 'SEND')
+            )
     ));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // CHAT MESSAGING SYSTEM — Characters, Groups, Conversation, Hub
+// Retro RPG Dialogue Box Style — Stardew Valley meets messenger
 // ═══════════════════════════════════════════════════════════════════════════
 
 var CHAT_CHARACTERS = {
-    carl:  { id: 'carl',  name: 'Carl',  emoji: '\uD83C\uDF3F', color: '#5A8A38', headerBg: 'linear-gradient(135deg, #0E1A08, #1A2A10)', border: '#3A6A28', tagline: 'Plant Expert · The reasonable one', bubbleBg: '#E8F5E0', bubbleColor: '#1A3A08' },
-    karl:  { id: 'karl',  name: 'Karl',  emoji: '\uD83E\uDD2C', color: '#CC3333', headerBg: 'linear-gradient(135deg, #2A0A0A, #1A0000)', border: '#8A2222', tagline: 'Jersey wiseguy · Trapped in your phone', bubbleBg: '#FFE8E8', bubbleColor: '#3A0808' },
-    rahul: { id: 'rahul', name: 'Rahul', emoji: '\uD83E\uDDD1\u200D\uD83D\uDCBB', color: '#9933CC', headerBg: 'linear-gradient(135deg, #1A0A2A, #0E0018)', border: '#6A3A8A', tagline: 'Mumbai boy · Homesick · Very not gord', bubbleBg: '#F3E8FF', bubbleColor: '#1A0A2A' },
-    mamta: { id: 'mamta', name: 'Mamta', emoji: '\uD83D\uDC69', color: '#CC9933', headerBg: 'linear-gradient(135deg, #2A1A0A, #1A0E00)', border: '#8A6A22', tagline: 'Big Mamta · Confused · WHERE IS RAHUL', bubbleBg: '#FFF5E0', bubbleColor: '#2A1A0A' },
+    carl:  { id: 'carl',  name: 'Carl',  emoji: '\uD83C\uDF3F', color: '#5A8A38', border: '#3A6A28', tagline: 'Plant Expert', bubbleBg: '#1A2A10', bubbleColor: '#C8E8A8', frameBg: '#0E1A08', frameBorder: '#4A8A2A' },
+    karl:  { id: 'karl',  name: 'Karl',  emoji: '\uD83E\uDD2C', color: '#CC3333', border: '#8A2222', tagline: 'Jersey Wiseguy', bubbleBg: '#2A0A0A', bubbleColor: '#FFBABA', frameBg: '#1A0000', frameBorder: '#AA3333' },
+    rahul: { id: 'rahul', name: 'Rahul', emoji: '\uD83E\uDDD1\u200D\uD83D\uDCBB', color: '#9933CC', border: '#6A3A8A', tagline: 'Mumbai Boy', bubbleBg: '#1A0A2A', bubbleColor: '#D8B8FF', frameBg: '#0E0018', frameBorder: '#8A4AAA' },
+    mamta: { id: 'mamta', name: 'Mamta', emoji: '\uD83D\uDC69', color: '#CC9933', border: '#8A6A22', tagline: 'Big Mamta', bubbleBg: '#2A1A0A', bubbleColor: '#FFE0A8', frameBg: '#1A0E00', frameBorder: '#AA8833' },
 };
 
 var CHAT_PRESET_GROUPS = [
@@ -2414,9 +2464,121 @@ var CHAT_PRESET_GROUPS = [
     { id: 'group_greenhouse', name: 'The Greenhouse',  emoji: '\uD83C\uDFE1', members: ['carl', 'karl', 'rahul', 'mamta'], color: '#5A8A38', tagline: 'All four — absolute greenhouse chaos' },
 ];
 
-// --- GroupChatPanel ---
-function GroupChatPanel({ group, plant, theme }) {
-    var pxSf = { fontFamily: "'Pixelify Sans', cursive" };
+// ─── RETRO PIXEL BUTTON COMPONENT ─────────────────────────────────────────
+// Stardew-style pixel button with 3D pressed effect
+function PixelBtn({ label, onClick, color, active, small, disabled, icon, style: extraStyle }) {
+    color = color || '#4A8A2A';
+    var baseC = color;
+    var lightC = adjustHex(color, 40);
+    var darkC = adjustHex(color, -50);
+    var textC = '#FFFFF0';
+    var sz = small ? { fontSize: '9px', padding: '4px 8px', letterSpacing: '0.06em' } : { fontSize: '11px', padding: '6px 14px', letterSpacing: '0.08em' };
+    return React.createElement('button', {
+        type: 'button', onClick: disabled ? undefined : onClick,
+        style: Object.assign({}, px8, sz, {
+            background: active ? darkC : baseC,
+            border: '3px solid ' + darkC,
+            borderTop: '3px solid ' + lightC,
+            borderLeft: '3px solid ' + lightC,
+            color: disabled ? '#88888880' : textC,
+            cursor: disabled ? 'default' : 'pointer',
+            opacity: disabled ? 0.5 : 1,
+            boxShadow: active ? 'inset 2px 2px 0 ' + darkC : '2px 2px 0 #00000040',
+            imageRendering: 'pixelated',
+            whiteSpace: 'nowrap',
+            transition: 'none',
+        }, extraStyle || {})
+    }, (icon ? icon + ' ' : '') + label);
+}
+function adjustHex(hex, amt) {
+    hex = hex.replace('#', '');
+    var r = Math.max(0, Math.min(255, parseInt(hex.substring(0,2), 16) + amt));
+    var g = Math.max(0, Math.min(255, parseInt(hex.substring(2,4), 16) + amt));
+    var b = Math.max(0, Math.min(255, parseInt(hex.substring(4,6), 16) + amt));
+    return '#' + [r,g,b].map(function(c) { return ('0' + c.toString(16)).slice(-2); }).join('');
+}
+
+// ─── RPG DIALOGUE FRAME ──────────────────────────────────────────────────
+// The core Stardew Valley-style dialogue box frame
+function RPGFrame({ children, borderColor, bgColor, style: extraStyle, noPad }) {
+    borderColor = borderColor || '#5A8A38';
+    bgColor = bgColor || '#0E1808';
+    var darkBorder = adjustHex(borderColor, -40);
+    var lightBorder = adjustHex(borderColor, 30);
+    return React.createElement('div', { style: Object.assign({
+        background: bgColor,
+        border: '4px solid ' + borderColor,
+        borderTop: '4px solid ' + lightBorder,
+        borderLeft: '4px solid ' + lightBorder,
+        borderRight: '4px solid ' + darkBorder,
+        borderBottom: '4px solid ' + darkBorder,
+        boxShadow: 'inset 0 0 0 2px ' + bgColor + ', inset 0 0 0 3px ' + borderColor + '40, 4px 4px 0 #00000060',
+        imageRendering: 'pixelated',
+        padding: noPad ? 0 : '10px 12px',
+        position: 'relative',
+    }, extraStyle || {}) }, children);
+}
+
+// ─── EMOTIONAL ANALYSIS ──────────────────────────────────────────────────
+// Client-side sentiment detection for cross-chat memory
+function detectEmotion(text, targetCharId) {
+    var lower = (text || '').toLowerCase();
+    var charName = CHAT_CHARACTERS[targetCharId] ? CHAT_CHARACTERS[targetCharId].name.toLowerCase() : '';
+    var insults = ['hate', 'stupid', 'idiot', 'shut up', 'annoying', 'worst', 'useless', 'dumb', 'trash', 'suck', 'terrible', 'ugly', 'loser'];
+    var praise = ['love', 'ily', 'best', 'amazing', 'awesome', 'great', 'brilliant', 'smart', 'funny', 'legend', 'goat', 'king', 'queen', 'miss you', 'appreciate'];
+    var roasts = ['roast', 'clown', 'joke', 'ratio', 'cringe', 'bruh', 'cap', 'sus', 'mid'];
+    // Check if message mentions or is directed at a specific character
+    var mentionsChar = charName && lower.indexOf(charName) !== -1;
+    for (var ii = 0; ii < insults.length; ii++) { if (lower.indexOf(insults[ii]) !== -1) return { emotion: 'insulted', intensity: mentionsChar ? 3 : 1 }; }
+    for (var ii = 0; ii < roasts.length; ii++) { if (lower.indexOf(roasts[ii]) !== -1) return { emotion: 'roasted', intensity: mentionsChar ? 2 : 1 }; }
+    for (var ii = 0; ii < praise.length; ii++) { if (lower.indexOf(praise[ii]) !== -1) return { emotion: 'praised', intensity: mentionsChar ? 3 : 1 }; }
+    return null;
+}
+
+// Build emotional context string for AI system prompts
+function buildEmotionalContext(charId, emotionalEvents) {
+    if (!emotionalEvents || !emotionalEvents.length) return '';
+    var relevant = emotionalEvents.filter(function(e) { return e.charId === charId; }).slice(-3);
+    if (!relevant.length) return '';
+    var lines = relevant.map(function(e) {
+        var ago = '';
+        try {
+            var diff = Date.now() - new Date(e.ts).getTime();
+            if (diff < 3600000) ago = 'moments ago';
+            else if (diff < 86400000) ago = 'earlier today';
+            else ago = 'recently';
+        } catch(x) { ago = 'recently'; }
+        return 'The user ' + e.emotion + ' you ' + ago + ' in another conversation: "' + e.summary + '"';
+    });
+    return '\n\nCROSS-CHAT MEMORY (things that happened in other conversations — you remember these and they affect your mood):\n' + lines.join('\n') + '\nReact naturally to this — if you were insulted, be hurt/snippy. If praised, be warm. Do NOT explicitly say "in another chat" but let it color your tone.';
+}
+
+// --- Message Timestamp + Read Receipt Helper ---
+function MsgTimestamp({ ts, isUser, isLast }) {
+    if (!ts) return null;
+    var timeStr = '';
+    try {
+        var d = new Date(ts);
+        var h = d.getHours(); var m = d.getMinutes();
+        var ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12 || 12;
+        timeStr = h + ':' + (m < 10 ? '0' : '') + m + ' ' + ampm;
+    } catch(e) { return null; }
+
+    var receiptIcon = '';
+    if (isUser) {
+        receiptIcon = isLast ? ' \u2713\u2713' : ' \u2713'; // ✓✓ for last (read), ✓ for delivered
+    }
+
+    return React.createElement('div', { style: Object.assign({}, pxS, {
+        fontSize: '9px', color: isUser ? '#7A9A68' : '#5A6A48',
+        textAlign: isUser ? 'right' : 'left',
+        marginTop: 2, letterSpacing: '0.03em',
+    }) }, timeStr + receiptIcon);
+}
+
+// --- GroupChatPanel (Retro RPG Style) ---
+function GroupChatPanel({ group, plant, theme, emotionalEvents, onEmotionalEvent }) {
     var _m = React.useState([]), messages = _m[0], setMessages = _m[1];
     var _i = React.useState(''), input = _i[0], setInput = _i[1];
     var _l = React.useState(false), loading = _l[0], setLoading = _l[1];
@@ -2432,6 +2594,8 @@ function GroupChatPanel({ group, plant, theme }) {
                 setTimeout(function() { if (bottomRef.current) bottomRef.current.scrollIntoView({ behavior: 'auto' }); }, 80);
             }
         }).catch(function(){});
+        // Mark as read
+        gasCall('chatMarkRead', chatId).catch(function(){});
     }, [chatId]);
 
     function buildGroupSystem(respondingChar) {
@@ -2441,18 +2605,15 @@ function GroupChatPanel({ group, plant, theme }) {
         if (plant) {
             plantCtx = '\nPLANT CONTEXT: ' + [plant.genus, plant.nickname && ('Nickname: ' + plant.nickname), plant.location && ('Location: ' + plant.location)].filter(Boolean).join(', ');
         }
-        return 'You are ' + charCfg.name + ' in a GROUP CHAT with ' + otherNames.join(', ') + ' and the user. Stay in character. Keep responses to 2-3 sentences max. React to what others said if relevant. Be natural and conversational — this is a group chat, not a consultation.' + plantCtx + '\nReturn ONLY your message text, no JSON, no quotes.';
+        var emoCtx = buildEmotionalContext(respondingChar, emotionalEvents || []);
+        return 'You are ' + charCfg.name + ' in a GROUP CHAT with ' + otherNames.join(', ') + ' and the user. Stay in character. Keep responses to 2-3 sentences max. React to what others said if relevant. Be natural and conversational — this is a group chat, not a consultation.' + plantCtx + emoCtx + '\nReturn ONLY your message text, no JSON, no quotes.';
     }
 
     function pickResponders() {
-        // Primary responder is random from members
         var shuffled = members.slice().sort(function() { return Math.random() - 0.5; });
         var primary = shuffled[0];
-        // 25% eavesdrop chance for a second character to chime in
         var eavesdropper = null;
-        if (shuffled.length > 1 && Math.random() < 0.25) {
-            eavesdropper = shuffled[1];
-        }
+        if (shuffled.length > 1 && Math.random() < 0.25) { eavesdropper = shuffled[1]; }
         return { primary: primary, eavesdropper: eavesdropper };
     }
 
@@ -2466,17 +2627,22 @@ function GroupChatPanel({ group, plant, theme }) {
         setMessages(function(prev) { return prev.concat(userMsg); });
         setTimeout(function() { if (bottomRef.current) bottomRef.current.scrollIntoView({ behavior: 'smooth' }); }, 30);
 
+        // Detect emotions for each character mentioned
+        members.forEach(function(memId) {
+            var emo = detectEmotion(text, memId);
+            if (emo && emo.intensity >= 1 && onEmotionalEvent) {
+                onEmotionalEvent(memId, emo.emotion, text.substring(0, 100), chatId);
+            }
+        });
+
         var responders = pickResponders();
         var allNew = [userMsg];
-
-        // Build conversation context
         var historySnippet = messages.slice(-10).map(function(m) {
             if (m.role === 'user') return 'User: ' + m.text;
             return (m.charName || 'Unknown') + ': ' + m.text;
         }).join('\n');
 
         try {
-            // Primary responder
             var sys1 = buildGroupSystem(responders.primary);
             var prompt1 = historySnippet + '\nUser: ' + text;
             var resp1 = await gasCall('plantosCallAI', sys1, prompt1, 300);
@@ -2486,7 +2652,6 @@ function GroupChatPanel({ group, plant, theme }) {
             allNew.push(msg1);
             setTimeout(function() { if (bottomRef.current) bottomRef.current.scrollIntoView({ behavior: 'smooth' }); }, 30);
 
-            // Eavesdropper
             if (responders.eavesdropper) {
                 var sys2 = buildGroupSystem(responders.eavesdropper);
                 var prompt2 = historySnippet + '\nUser: ' + text + '\n' + CHAT_CHARACTERS[responders.primary].name + ': ' + text1;
@@ -2498,8 +2663,6 @@ function GroupChatPanel({ group, plant, theme }) {
                     allNew.push(msg2);
                 }
             }
-
-            // Bump relationship between responders
             if (responders.eavesdropper && window.HAS_GAS) {
                 var pair = [responders.primary, responders.eavesdropper].sort().join('_');
                 gasCall('chatBumpRelationship', pair, 1).catch(function(){});
@@ -2511,12 +2674,9 @@ function GroupChatPanel({ group, plant, theme }) {
 
         setLoading(false);
         setTimeout(function() { if (bottomRef.current) bottomRef.current.scrollIntoView({ behavior: 'smooth' }); }, 60);
-
-        // Save full history
         if (window.HAS_GAS) {
             setMessages(function(cur) {
                 gasCall('chatSaveHistory', chatId, JSON.stringify(cur.filter(function(m) { return !m.loading && !m.error && m.text; }))).catch(function(){});
-                // Save preview
                 var lastChar = allNew[allNew.length - 1];
                 if (lastChar && lastChar.text) {
                     gasCall('chatSavePreview', chatId, (lastChar.charName ? lastChar.charName + ': ' : '') + lastChar.text.substring(0, 60)).catch(function(){});
@@ -2530,98 +2690,81 @@ function GroupChatPanel({ group, plant, theme }) {
     var fontSize_msg = isMobile ? '13px' : '15px';
 
     return React.createElement('div', { style: { display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 } },
-        // Group header
-        React.createElement('div', { style: {
-            display: 'flex', alignItems: 'center', gap: 10,
-            padding: '8px 12px',
-            background: 'linear-gradient(135deg, #1A1A08, #0E1808)',
-            borderBottom: '2px solid ' + (group.color || '#3A6A28'),
-        }},
-            React.createElement('div', { style: { fontSize: 24 } }, group.emoji),
-            React.createElement('div', { style: { flex: 1 } },
-                React.createElement('div', { style: Object.assign({}, px8, { fontSize: '12px', color: group.color || '#C8A84B', letterSpacing: '0.06em' }) }, group.name.toUpperCase()),
-                React.createElement('div', { style: Object.assign({}, pxSf, { fontSize: '11px', color: '#8A9A78' }) },
-                    members.map(function(m) { return CHAT_CHARACTERS[m].emoji; }).join(' ') + ' ' + members.map(function(m) { return CHAT_CHARACTERS[m].name; }).join(', ')
-                )
-            )
-        ),
-
-        // Messages area
+        // Messages area — dark RPG background
         React.createElement('div', { style: {
             flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch',
-            background: '#F8F4E8', padding: '12px 14px',
-            display: 'flex', flexDirection: 'column', gap: 8,
+            background: '#0A0E06', padding: '10px 8px',
+            display: 'flex', flexDirection: 'column', gap: 6,
         }},
-            messages.length === 0 && React.createElement('div', { style: { textAlign: 'center', opacity: 0.5, padding: '40px 20px' } },
-                React.createElement('div', { style: { fontSize: 32, marginBottom: 8 } }, group.emoji),
-                React.createElement('div', { style: Object.assign({}, pxSf, { fontSize: '12px', color: '#7A5A30' }) }, group.tagline)
+            messages.length === 0 && React.createElement('div', { style: { textAlign: 'center', padding: '30px 20px' } },
+                React.createElement(RPGFrame, { borderColor: group.color || '#5A8A38', style: { textAlign: 'center' } },
+                    React.createElement('div', { style: { fontSize: 28, marginBottom: 6 } }, group.emoji),
+                    React.createElement('div', { style: Object.assign({}, px8, { fontSize: '10px', color: group.color || '#C8A84B', letterSpacing: '0.08em' }) }, group.name.toUpperCase()),
+                    React.createElement('div', { style: Object.assign({}, pxS, { fontSize: '12px', color: '#8A9A78', marginTop: 4 }) }, group.tagline),
+                    React.createElement('div', { style: Object.assign({}, pxS, { fontSize: '11px', color: '#6A7A58', marginTop: 6 }) },
+                        members.map(function(m) { return CHAT_CHARACTERS[m].emoji + ' ' + CHAT_CHARACTERS[m].name; }).join('  ')
+                    )
+                )
             ),
 
             messages.map(function(msg, i) {
                 var isUser = msg.role === 'user';
                 var charCfg = !isUser && msg.charId ? CHAT_CHARACTERS[msg.charId] : null;
-                return React.createElement('div', { key: i, style: {
-                    display: 'flex', flexDirection: 'column',
-                    alignItems: isUser ? 'flex-end' : 'flex-start', gap: 2,
-                }},
-                    !isUser && charCfg && React.createElement('div', { style: Object.assign({}, pxSf, {
-                        fontSize: '10px', color: charCfg.color, fontWeight: 700, paddingLeft: 4,
-                    }) }, charCfg.emoji + ' ' + charCfg.name),
-                    React.createElement('div', { style: {
-                        maxWidth: '78%', padding: '8px 12px',
-                        background: isUser ? '#2E5A1A' : (charCfg ? charCfg.bubbleBg : '#FFFDF0'),
-                        border: '3px solid ' + (isUser ? '#1A3A08' : (charCfg ? charCfg.border : '#C8A85A')),
-                        boxShadow: isUser ? 'none' : '2px 2px 0 ' + (charCfg ? charCfg.border + '40' : '#8A6A2A'),
-                        color: isUser ? '#D0F0A8' : (charCfg ? charCfg.bubbleColor : '#2C1000'),
-                        fontFamily: "'Pixelify Sans', cursive",
-                        fontSize: fontSize_msg, lineHeight: 1.6,
-                    }},
-                        msg.error
-                            ? React.createElement('span', { style: { color: '#B83030' } }, '\u26A0 ' + msg.text)
-                            : React.createElement('span', null, msg.text)
-                    )
+                var isLastUserMsg = isUser && (function() { for (var j = i + 1; j < messages.length; j++) { if (messages[j].role === 'user') return false; } return true; })();
+                if (isUser) {
+                    return React.createElement('div', { key: i, style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end' } },
+                        React.createElement(RPGFrame, { borderColor: '#4A8A2A', bgColor: '#1A2A0E', style: { maxWidth: '80%' } },
+                            React.createElement('div', { style: Object.assign({}, pxS, { fontSize: fontSize_msg, color: '#C8E8A8', lineHeight: 1.5 }) }, msg.text)
+                        ),
+                        React.createElement(MsgTimestamp, { ts: msg.ts, isUser: true, isLast: isLastUserMsg })
+                    );
+                }
+                return React.createElement('div', { key: i, style: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start' } },
+                    React.createElement(RPGFrame, { borderColor: charCfg ? charCfg.border : '#5A5A3A', bgColor: charCfg ? charCfg.bubbleBg : '#0E0E08', style: { maxWidth: '82%' } },
+                        charCfg && React.createElement('div', { style: Object.assign({}, px8, {
+                            fontSize: '9px', color: charCfg.color, letterSpacing: '0.06em', marginBottom: 3,
+                        }) }, charCfg.emoji + ' ' + charCfg.name.toUpperCase()),
+                        React.createElement('div', { style: Object.assign({}, pxS, {
+                            fontSize: fontSize_msg, color: charCfg ? charCfg.bubbleColor : '#C8C8B8', lineHeight: 1.5,
+                        }) },
+                            msg.error
+                                ? React.createElement('span', { style: { color: '#E85050' } }, '\u26A0 ' + msg.text)
+                                : msg.text
+                        )
+                    ),
+                    React.createElement(MsgTimestamp, { ts: msg.ts, isUser: false })
                 );
             }),
-
             React.createElement('div', { ref: bottomRef })
         ),
 
-        // Input bar
-        React.createElement('div', { style: {
-            display: 'flex', gap: 0, flexShrink: 0,
-            border: '2px solid ' + theme.cardBorder,
-            background: theme.rowBg,
-        }},
+        // Input bar — RPG styled
+        React.createElement(RPGFrame, { borderColor: '#3A5A28', bgColor: '#0A1206', noPad: true, style: { flexShrink: 0, display: 'flex', margin: '0 4px 4px' } },
             React.createElement('textarea', {
                 value: input,
                 onChange: function(e) { setInput(e.target.value); },
                 onKeyDown: function(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } },
-                placeholder: 'Message ' + group.name + '...',
+                placeholder: '\u270E Message ' + group.name + '...',
                 rows: 2,
-                style: Object.assign({}, pxSf, {
+                style: Object.assign({}, pxS, {
                     flex: 1, fontSize: '16px', padding: '8px 10px',
                     border: 'none', outline: 'none', resize: 'none',
-                    background: 'transparent', color: theme.txtP, lineHeight: 1.4,
+                    background: 'transparent', color: '#C8E8A8', lineHeight: 1.4,
                 })
             }),
-            React.createElement('button', {
-                type: 'button', onClick: sendMessage,
+            React.createElement(PixelBtn, {
+                label: loading ? '\u231B' : 'SEND',
+                onClick: sendMessage,
                 disabled: loading || !input.trim(),
-                style: Object.assign({}, px8, {
-                    fontSize: '14px', padding: '0 16px', cursor: loading ? 'wait' : 'pointer',
-                    border: 'none', borderLeft: '2px solid ' + theme.cardBorder,
-                    background: loading ? theme.rowBg : '#2E5A1A',
-                    color: loading ? theme.txtS : '#D0F0A8',
-                    flexShrink: 0, minHeight: 44, minWidth: 48,
-                    opacity: (!input.trim() && !loading) ? 0.5 : 1,
-                })
-            }, loading ? '\u231B' : 'SEND')
+                color: '#2E6A1A',
+                style: { margin: 4, alignSelf: 'stretch', minWidth: 56 },
+            })
         )
     );
 }
 
-// --- ChatConversationScreen ---
-function ChatConversationScreen({ chatTarget, onBack, plant }) {
+// --- ChatConversationScreen (Retro RPG) ---
+function ChatConversationScreen({ chatTarget, onBack, plant, emotionalEvents, onEmotionalEvent }) {
     var theme = useTheme();
     var _ac = React.useState(chatTarget.charId || 'carl'), activeChar = _ac[0], setActiveChar = _ac[1];
     var _kb = React.useState(true), kbEnabled = _kb[0], setKbEnabled = _kb[1];
@@ -2631,40 +2774,32 @@ function ChatConversationScreen({ chatTarget, onBack, plant }) {
     var charCfg = isDM ? CHAT_CHARACTERS[chatTarget.charId] : null;
     var groupCfg = isGroup ? chatTarget.group : null;
 
-    var headerBg = isDM ? charCfg.headerBg : 'linear-gradient(135deg, #1A1A08, #0E1808)';
-    var headerBorder = isDM ? charCfg.border : (groupCfg ? groupCfg.color : '#3A6A28');
+    var frameBorder = isDM ? (charCfg.frameBorder || charCfg.border) : (groupCfg ? groupCfg.color : '#5A8A38');
+    var frameBg = isDM ? (charCfg.frameBg || '#0E1808') : '#0A0E06';
     var headerName = isDM ? charCfg.name.toUpperCase() : (groupCfg ? groupCfg.name.toUpperCase() : 'CHAT');
     var headerEmoji = isDM ? charCfg.emoji : (groupCfg ? groupCfg.emoji : '\uD83D\uDCAC');
 
     return React.createElement('div', { style: {
-        display: 'flex', flexDirection: 'column', height: '100vh', maxHeight: '100vh',
-        background: theme.bg, overflow: 'hidden',
+        display: 'flex', flexDirection: 'column', height: '100%', maxHeight: '100%', flex: 1, minHeight: 0,
+        background: '#060A04', overflow: 'hidden',
     }},
-        // Top bar with back
-        React.createElement('div', { style: {
-            display: 'flex', alignItems: 'center', gap: 10,
-            padding: '10px 14px',
-            background: headerBg,
-            borderBottom: '3px solid ' + headerBorder,
-            flexShrink: 0,
-        }},
-            React.createElement('button', { type: 'button', onClick: onBack, style: Object.assign({}, px8, {
-                fontSize: '10px', padding: '5px 10px', cursor: 'pointer',
-                background: 'rgba(255,255,255,0.08)', border: '2px solid rgba(255,255,255,0.15)',
-                color: '#C8C8C8',
-            }) }, '\u2190'),
+        // RPG-styled header bar
+        React.createElement(RPGFrame, { borderColor: frameBorder, bgColor: frameBg, style: { flexShrink: 0, margin: '4px 4px 0', padding: '8px 10px', display: 'flex', alignItems: 'center', gap: 8 } },
+            React.createElement(PixelBtn, { label: '\u2190', onClick: onBack, color: '#3A3A2A', small: true }),
             isDM && React.createElement(CarlBust, { px: 3, persona: chatTarget.charId }),
-            !isDM && React.createElement('div', { style: { fontSize: 24 } }, headerEmoji),
+            !isDM && React.createElement('div', { style: { fontSize: 22 } }, headerEmoji),
             React.createElement('div', { style: { flex: 1 } },
-                React.createElement('div', { style: Object.assign({}, px8, { fontSize: '12px', color: isDM ? charCfg.color : (groupCfg ? groupCfg.color : '#C8A84B'), letterSpacing: '0.06em' }) }, headerName),
-                React.createElement('div', { style: Object.assign({}, pxS, { fontSize: '11px', color: '#8A9A78' }) },
+                React.createElement('div', { style: Object.assign({}, px8, { fontSize: '10px', color: frameBorder, letterSpacing: '0.08em' }) }, headerName),
+                React.createElement('div', { style: Object.assign({}, pxS, { fontSize: '11px', color: '#7A8A68' }) },
                     isDM ? charCfg.tagline : (groupCfg ? groupCfg.tagline : '')
                 )
-            )
+            ),
+            // Group info button
+            isGroup && React.createElement(PixelBtn, { label: '\u2139', onClick: function() {}, color: '#2A3A4A', small: true })
         ),
 
         // Chat body
-        React.createElement('div', { style: { flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' } },
+        React.createElement('div', { style: { flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden', margin: '2px 4px 4px' } },
             isDM ? React.createElement(CarlNPCPanel, {
                 plant: plant,
                 pxS: pxS,
@@ -2675,35 +2810,50 @@ function ChatConversationScreen({ chatTarget, onBack, plant }) {
                 setKbEnabled: setKbEnabled,
                 chatId: 'dm_' + chatTarget.charId,
                 fixedChar: chatTarget.charId,
+                emotionalEvents: emotionalEvents,
+                onEmotionalEvent: onEmotionalEvent,
             }) : React.createElement(GroupChatPanel, {
                 group: groupCfg,
                 plant: plant,
                 theme: theme,
+                emotionalEvents: emotionalEvents,
+                onEmotionalEvent: onEmotionalEvent,
             })
         )
     );
 }
 
-// --- CarlHomeScreen (Messaging Hub) ---
+// --- CarlHomeScreen (Retro RPG Messaging Hub) ---
 function CarlHomeScreen() {
     var _n = useNavigation(), goBack = _n.goBack, navigate = _n.navigate;
     var _pd = usePlantData(), getAllPlants = _pd.getAllPlants;
     var theme = useTheme();
 
-    var _view = React.useState('hub'), view = _view[0], setView = _view[1]; // 'hub' | 'conversation'
+    var _view = React.useState('hub'), view = _view[0], setView = _view[1];
     var _target = React.useState(null), chatTarget = _target[0], setChatTarget = _target[1];
     var _plant = React.useState(null), selectedPlant = _plant[0], setSelectedPlant = _plant[1];
     var _previews = React.useState({}), previews = _previews[0], setPreviews = _previews[1];
     var _unprompted = React.useState({}), unprompted = _unprompted[0], setUnprompted = _unprompted[1];
+    var _tab = React.useState('dm'), activeTab = _tab[0], setActiveTab = _tab[1]; // 'dm' | 'group' | 'custom'
+    var _customGroups = React.useState([]), customGroups = _customGroups[0], setCustomGroups = _customGroups[1];
+    var _showCreate = React.useState(false), showCreate = _showCreate[0], setShowCreate = _showCreate[1];
+    var _emotionalEvents = React.useState([]), emotionalEvents = _emotionalEvents[0], setEmotionalEvents = _emotionalEvents[1];
 
-    // Load previews + check for unprompted messages
+    // Load previews + unprompted messages + custom groups + emotional events
     React.useEffect(function() {
         if (!window.HAS_GAS) return;
         gasCall('chatGetLastPreviews').then(function(res) {
             if (res && res.ok && res.previews) setPreviews(res.previews);
         }).catch(function(){});
 
-        // Check each character for unprompted messages
+        gasCall('chatGetCustomGroups').then(function(res) {
+            if (res && res.ok && Array.isArray(res.groups)) setCustomGroups(res.groups);
+        }).catch(function(){});
+
+        gasCall('chatGetAllEmotionalContext').then(function(res) {
+            if (res && res.ok && Array.isArray(res.events)) setEmotionalEvents(res.events);
+        }).catch(function(){});
+
         ['carl', 'karl', 'rahul', 'mamta'].forEach(function(charId) {
             gasCall('chatGenerateUnprompted', charId).then(function(res) {
                 if (res && res.ok && res.text) {
@@ -2712,12 +2862,20 @@ function CarlHomeScreen() {
                         n[charId] = res.text;
                         return n;
                     });
-                    // Save as preview too
                     gasCall('chatSavePreview', 'dm_' + charId, CHAT_CHARACTERS[charId].name + ': ' + res.text.substring(0, 60)).catch(function(){});
                 }
             }).catch(function(){});
         });
     }, []);
+
+    function handleEmotionalEvent(charId, emotion, summary, sourceChatId) {
+        // Save locally and to backend
+        var evt = { charId: charId, emotion: emotion, summary: summary, source: sourceChatId, ts: new Date().toISOString() };
+        setEmotionalEvents(function(prev) { return prev.concat(evt); });
+        if (window.HAS_GAS) {
+            gasCall('chatLogEmotionalEvent', charId, emotion, summary, sourceChatId).catch(function(){});
+        }
+    }
 
     function openDM(charId) {
         setChatTarget({ type: 'dm', charId: charId });
@@ -2732,11 +2890,40 @@ function CarlHomeScreen() {
     function backToHub() {
         setView('hub');
         setChatTarget(null);
-        // Refresh previews
         if (window.HAS_GAS) {
             gasCall('chatGetLastPreviews').then(function(res) {
                 if (res && res.ok && res.previews) setPreviews(res.previews);
             }).catch(function(){});
+            gasCall('chatGetAllEmotionalContext').then(function(res) {
+                if (res && res.ok && Array.isArray(res.events)) setEmotionalEvents(res.events);
+            }).catch(function(){});
+        }
+    }
+
+    function createCustomGroup(name, memberIds) {
+        var newGroup = {
+            id: 'custom_' + Date.now(),
+            name: name,
+            emoji: '\uD83D\uDCAC',
+            members: memberIds,
+            color: '#6A8A48',
+            tagline: memberIds.map(function(m) { return CHAT_CHARACTERS[m] ? CHAT_CHARACTERS[m].name : m; }).join(', '),
+            custom: true,
+        };
+        var updated = customGroups.concat(newGroup);
+        setCustomGroups(updated);
+        if (window.HAS_GAS) {
+            gasCall('chatSaveCustomGroups', JSON.stringify(updated)).catch(function(){});
+        }
+        setShowCreate(false);
+        openGroup(newGroup);
+    }
+
+    function leaveCustomGroup(groupId) {
+        var updated = customGroups.filter(function(g) { return g.id !== groupId; });
+        setCustomGroups(updated);
+        if (window.HAS_GAS) {
+            gasCall('chatSaveCustomGroups', JSON.stringify(updated)).catch(function(){});
         }
     }
 
@@ -2746,10 +2933,12 @@ function CarlHomeScreen() {
             chatTarget: chatTarget,
             onBack: backToHub,
             plant: selectedPlant,
+            emotionalEvents: emotionalEvents,
+            onEmotionalEvent: handleEmotionalEvent,
         });
     }
 
-    // Hub mode — iMessage-style list
+    // Hub mode — Retro RPG Dialogue Box Messenger
     var isMobile = typeof window !== 'undefined' && window.innerWidth < 700;
 
     function getPreviewText(chatId, charId) {
@@ -2773,94 +2962,155 @@ function CarlHomeScreen() {
         return '';
     }
 
+    // RPG-styled chat row
     function ChatRow(props) {
         var hasNew = props.charId && unprompted[props.charId];
+        var borderC = props.color || '#3A5A28';
         return React.createElement('button', {
-            type: 'button',
-            onClick: props.onClick,
+            type: 'button', onClick: props.onClick,
             style: {
-                display: 'flex', alignItems: 'center', gap: 12,
-                padding: '12px 14px', width: '100%',
-                background: hasNew ? 'rgba(90,138,56,0.08)' : 'transparent',
-                border: 'none', borderBottom: '1px solid ' + theme.cardBorder,
-                cursor: 'pointer', textAlign: 'left',
+                display: 'flex', alignItems: 'center', gap: 10,
+                width: '100%', padding: 0, margin: '0 0 6px',
+                background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left',
             }
         },
-            // Avatar
-            props.avatar || React.createElement('div', { style: {
-                width: 44, height: 44, borderRadius: '50%',
-                background: props.color ? props.color + '22' : '#1A2A1222',
-                border: '2px solid ' + (props.color || theme.cardBorder),
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 22, flexShrink: 0,
-            } }, props.emoji),
-            // Text
-            React.createElement('div', { style: { flex: 1, minWidth: 0 } },
-                React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 2 } },
+            React.createElement(RPGFrame, { borderColor: hasNew ? borderC : adjustHex(borderC, -20), bgColor: hasNew ? '#0E1A0A' : '#080E06', style: {
+                width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px',
+                transition: 'none',
+            }},
+                // Pixel avatar circle
+                props.bust
+                    ? React.createElement('div', { style: { flexShrink: 0 } }, props.bust)
+                    : React.createElement('div', { style: {
+                        width: 36, height: 36,
+                        background: borderC + '30',
+                        border: '3px solid ' + borderC,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: 18, flexShrink: 0, imageRendering: 'pixelated',
+                    } }, props.emoji),
+                // Text
+                React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+                    React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 1 } },
+                        React.createElement('div', { style: Object.assign({}, px8, {
+                            fontSize: isMobile ? '10px' : '11px',
+                            color: hasNew ? borderC : '#A8A888',
+                            letterSpacing: '0.06em',
+                        }) }, props.name.toUpperCase()),
+                        props.time && React.createElement('div', { style: Object.assign({}, pxS, {
+                            fontSize: '10px', color: '#6A7A58', flexShrink: 0,
+                        }) }, props.time)
+                    ),
                     React.createElement('div', { style: Object.assign({}, pxS, {
-                        fontSize: isMobile ? '14px' : '15px',
-                        fontWeight: hasNew ? 900 : 600,
-                        color: theme.txtP,
-                    }) }, props.name),
-                    props.time && React.createElement('div', { style: Object.assign({}, pxS, {
-                        fontSize: '11px', color: theme.txtS, flexShrink: 0,
-                    }) }, props.time)
+                        fontSize: isMobile ? '12px' : '13px',
+                        color: hasNew ? '#C8D8B8' : '#6A7A58',
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }) }, props.preview)
                 ),
-                React.createElement('div', { style: Object.assign({}, pxS, {
-                    fontSize: isMobile ? '12px' : '13px',
-                    color: hasNew ? theme.txtP : theme.txtS,
-                    fontWeight: hasNew ? 600 : 400,
-                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }) }, props.preview)
+                // Unread indicator — pixel exclamation
+                hasNew && React.createElement('div', { style: Object.assign({}, px8, {
+                    fontSize: '10px', color: '#E8D060', animation: 'rpgBlink 1s infinite',
+                }) }, '!')
+            )
+        );
+    }
+
+    // --- Create Group Modal ---
+    function CreateGroupModal() {
+        var _name = React.useState(''), gName = _name[0], setGName = _name[1];
+        var _sel = React.useState({}), selected = _sel[0], setSelected = _sel[1];
+
+        function toggleMember(id) {
+            setSelected(function(prev) {
+                var n = Object.assign({}, prev);
+                if (n[id]) delete n[id]; else n[id] = true;
+                return n;
+            });
+        }
+
+        var selIds = Object.keys(selected).filter(function(k) { return selected[k]; });
+
+        return React.createElement(RPGFrame, { borderColor: '#6A8A48', bgColor: '#0A1206', style: { margin: '8px 0' } },
+            React.createElement('div', { style: Object.assign({}, px8, { fontSize: '10px', color: '#A8D88C', letterSpacing: '0.08em', marginBottom: 8 }) }, 'NEW GROUP CHAT'),
+            React.createElement('input', {
+                value: gName, onChange: function(e) { setGName(e.target.value); },
+                placeholder: 'Group name...',
+                style: Object.assign({}, pxS, {
+                    width: '100%', fontSize: '16px', padding: '6px 8px', marginBottom: 8,
+                    background: '#060A04', border: '3px solid #3A5A28', color: '#C8E8A8',
+                    outline: 'none', boxSizing: 'border-box',
+                })
+            }),
+            React.createElement('div', { style: Object.assign({}, px8, { fontSize: '9px', color: '#7A8A68', marginBottom: 6 }) }, 'SELECT MEMBERS'),
+            React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 10 } },
+                Object.keys(CHAT_CHARACTERS).map(function(cId) {
+                    var c = CHAT_CHARACTERS[cId];
+                    var isSel = !!selected[cId];
+                    return React.createElement(PixelBtn, {
+                        key: cId,
+                        label: c.emoji + ' ' + c.name,
+                        onClick: function() { toggleMember(cId); },
+                        color: isSel ? c.border : '#2A2A2A',
+                        active: isSel,
+                        small: true,
+                    });
+                })
             ),
-            // Unread dot
-            hasNew && React.createElement('div', { style: {
-                width: 10, height: 10, borderRadius: '50%',
-                background: '#5A8A38', flexShrink: 0,
-            } })
+            React.createElement('div', { style: { display: 'flex', gap: 6 } },
+                React.createElement(PixelBtn, {
+                    label: 'CREATE',
+                    onClick: function() { if (gName.trim() && selIds.length >= 1) createCustomGroup(gName.trim(), selIds); },
+                    color: '#2E6A1A',
+                    disabled: !gName.trim() || selIds.length < 1,
+                }),
+                React.createElement(PixelBtn, {
+                    label: 'CANCEL',
+                    onClick: function() { setShowCreate(false); },
+                    color: '#5A2A2A',
+                })
+            )
         );
     }
 
     return React.createElement('div', { style: {
-        display: 'flex', flexDirection: 'column', height: '100vh', maxHeight: '100vh',
-        background: theme.bg, overflow: 'hidden',
+        display: 'flex', flexDirection: 'column', height: '100%', maxHeight: '100%', flex: 1, minHeight: 0,
+        background: '#060A04', overflow: 'hidden',
     }},
-        // Hub header
-        React.createElement('div', { style: {
-            padding: '14px 16px 10px',
-            background: 'linear-gradient(135deg, #0A1808, #142010)',
-            borderBottom: '3px solid #3A5A28',
-            flexShrink: 0,
+        // RPG Header Frame
+        React.createElement(RPGFrame, { borderColor: '#4A7A30', bgColor: '#0A1608', style: {
+            flexShrink: 0, margin: '4px 4px 0', padding: '10px 12px',
         }},
-            React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 } },
-                React.createElement('div', { style: { fontSize: 26 } }, '\uD83D\uDCAC'),
+            React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 } },
+                React.createElement('div', { style: { fontSize: 22 } }, '\uD83D\uDCEC'),
                 React.createElement('div', { style: { flex: 1 } },
-                    React.createElement('div', { style: Object.assign({}, px8, { fontSize: '12px', color: '#A8D88C', letterSpacing: '0.08em' }) }, 'THE GREENHOUSE'),
-                    React.createElement('div', { style: Object.assign({}, pxS, { fontSize: '12px', color: '#6A8A58' }) }, 'Messages')
+                    React.createElement('div', { style: Object.assign({}, px8, { fontSize: '10px', color: '#A8D88C', letterSpacing: '0.1em' }) }, 'THE GREENHOUSE'),
+                    React.createElement('div', { style: Object.assign({}, pxS, { fontSize: '11px', color: '#6A8A58' }) }, 'Messenger')
                 )
             ),
-            // Plant context picker (compact)
-            React.createElement(HubPlantPicker, { selectedPlant: selectedPlant, setSelectedPlant: setSelectedPlant, theme: theme })
+            // Plant context picker
+            React.createElement(HubPlantPicker, { selectedPlant: selectedPlant, setSelectedPlant: setSelectedPlant, theme: theme }),
+            // Tab bar — pixel buttons
+            React.createElement('div', { style: { display: 'flex', gap: 4, marginTop: 8, flexWrap: 'wrap' } },
+                React.createElement(PixelBtn, { label: 'DMs', onClick: function() { setActiveTab('dm'); }, color: activeTab === 'dm' ? '#4A8A2A' : '#2A3A1A', active: activeTab === 'dm', small: true, icon: '\uD83D\uDCE8' }),
+                React.createElement(PixelBtn, { label: 'GROUPS', onClick: function() { setActiveTab('group'); }, color: activeTab === 'group' ? '#4A8A2A' : '#2A3A1A', active: activeTab === 'group', small: true, icon: '\uD83D\uDC65' }),
+                React.createElement(PixelBtn, { label: 'MY CHATS', onClick: function() { setActiveTab('custom'); }, color: activeTab === 'custom' ? '#4A8A2A' : '#2A3A1A', active: activeTab === 'custom', small: true, icon: '\u2B50' })
+            )
         ),
 
         // Chat list
         React.createElement('div', { style: {
             flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch',
+            padding: '6px 4px',
         }},
-            // Section: DMs
-            React.createElement('div', { style: Object.assign({}, px8, {
-                fontSize: '8px', color: '#6A8A58', letterSpacing: '0.12em',
-                padding: '10px 14px 4px', background: theme.bg,
-            }) }, 'DIRECT MESSAGES'),
-
-            Object.keys(CHAT_CHARACTERS).map(function(charId) {
+            // DM Tab
+            activeTab === 'dm' && Object.keys(CHAT_CHARACTERS).map(function(charId) {
                 var c = CHAT_CHARACTERS[charId];
                 var dmId = 'dm_' + charId;
                 return React.createElement(ChatRow, {
                     key: charId,
                     name: c.name,
                     emoji: c.emoji,
-                    color: c.color,
+                    color: c.frameBorder || c.border,
+                    bust: React.createElement(CarlBust, { px: 2, persona: charId }),
                     preview: getPreviewText(dmId, charId),
                     time: getPreviewTime(dmId),
                     charId: charId,
@@ -2868,13 +3118,8 @@ function CarlHomeScreen() {
                 });
             }),
 
-            // Section: Group Chats
-            React.createElement('div', { style: Object.assign({}, px8, {
-                fontSize: '8px', color: '#6A8A58', letterSpacing: '0.12em',
-                padding: '14px 14px 4px', background: theme.bg,
-            }) }, 'GROUP CHATS'),
-
-            CHAT_PRESET_GROUPS.map(function(g) {
+            // Group Tab
+            activeTab === 'group' && CHAT_PRESET_GROUPS.map(function(g) {
                 return React.createElement(ChatRow, {
                     key: g.id,
                     name: g.name,
@@ -2887,20 +3132,76 @@ function CarlHomeScreen() {
                 });
             }),
 
-            // Legacy mode link
-            React.createElement('div', { style: { padding: '16px 14px', textAlign: 'center' } },
-                React.createElement('button', {
-                    type: 'button',
+            // Custom Groups Tab
+            activeTab === 'custom' && [
+                // Create new group button
+                React.createElement('div', { key: 'create-btn', style: { marginBottom: 8 } },
+                    !showCreate
+                        ? React.createElement(PixelBtn, {
+                            label: '+ NEW GROUP',
+                            onClick: function() { setShowCreate(true); },
+                            color: '#2E6A1A',
+                            icon: '\u2795',
+                            style: { width: '100%' },
+                        })
+                        : React.createElement(CreateGroupModal, { key: 'modal' })
+                ),
+
+                // Custom groups list
+                customGroups.length === 0 && !showCreate && React.createElement(RPGFrame, {
+                    key: 'empty',
+                    borderColor: '#3A3A2A',
+                    bgColor: '#080A06',
+                    style: { textAlign: 'center', padding: '20px 16px' },
+                },
+                    React.createElement('div', { style: Object.assign({}, pxS, { fontSize: '12px', color: '#6A7A58' }) }, 'No custom groups yet'),
+                    React.createElement('div', { style: Object.assign({}, pxS, { fontSize: '11px', color: '#4A5A38', marginTop: 4 }) }, 'Create one to start chatting!')
+                ),
+
+                customGroups.map(function(g) {
+                    return React.createElement('div', { key: g.id, style: { position: 'relative', marginBottom: 6 } },
+                        React.createElement(ChatRow, {
+                            name: g.name,
+                            emoji: g.emoji || '\uD83D\uDCAC',
+                            color: g.color || '#6A8A48',
+                            preview: getPreviewText(g.id, null),
+                            time: getPreviewTime(g.id),
+                            charId: null,
+                            onClick: function() { openGroup(g); },
+                        }),
+                        // Leave button (small, top-right)
+                        React.createElement('div', { style: { position: 'absolute', top: 4, right: 8, zIndex: 2 } },
+                            React.createElement(PixelBtn, {
+                                label: 'X',
+                                onClick: function(e) { e.stopPropagation(); leaveCustomGroup(g.id); },
+                                color: '#5A2A2A',
+                                small: true,
+                            })
+                        )
+                    );
+                })
+            ],
+
+            // Classic mode link
+            React.createElement('div', { style: { padding: '12px 0', textAlign: 'center' } },
+                React.createElement(PixelBtn, {
+                    label: 'CLASSIC MODE',
                     onClick: function() { navigate('carl-chat'); },
-                    style: Object.assign({}, pxS, {
-                        fontSize: '11px', color: theme.txtS, background: 'transparent',
-                        border: '1px dashed ' + theme.cardBorder, padding: '6px 14px',
-                        cursor: 'pointer', borderRadius: 4,
-                    })
-                }, '\uD83C\uDF3F Classic Carl (plant picker mode)')
+                    color: '#2A2A1A',
+                    small: true,
+                    icon: '\uD83C\uDF3F',
+                })
             )
         )
     );
+}
+
+// Add RPG blink animation
+if (typeof document !== 'undefined' && !document.getElementById('rpg-blink-style')) {
+    var rpgStyle = document.createElement('style');
+    rpgStyle.id = 'rpg-blink-style';
+    rpgStyle.textContent = '@keyframes rpgBlink { 0%,100% { opacity:1; } 50% { opacity:0; } }';
+    document.head.appendChild(rpgStyle);
 }
 
 // --- HubPlantPicker (compact inline plant picker for hub) ---
@@ -2922,40 +3223,37 @@ function HubPlantPicker({ selectedPlant, setSelectedPlant, theme }) {
         : plants.slice(0, 15);
 
     return React.createElement('div', null,
-        React.createElement('button', {
-            type: 'button', onClick: function() { setOpen(!open); },
-            style: Object.assign({}, pxS, {
-                fontSize: '11px', padding: '4px 10px',
-                background: selectedPlant ? '#1A3A1A' : 'rgba(255,255,255,0.06)',
-                border: '1px solid ' + (selectedPlant ? '#2E7A2E' : 'rgba(255,255,255,0.12)'),
-                color: selectedPlant ? '#A8E89C' : '#8A9A78',
-                cursor: 'pointer', borderRadius: 3,
-            })
-        }, selectedPlant
-            ? '\uD83C\uDF3F ' + (selectedPlant.nickname || selectedPlant.genus || 'Plant')
-            : '\uD83C\uDF3F Pick a plant for context'),
-        open && React.createElement('div', { style: {
-            marginTop: 6, background: 'rgba(0,0,0,0.4)', border: '1px solid ' + theme.cardBorder,
-            borderRadius: 4, padding: 6, maxHeight: 160, overflowY: 'auto',
+        React.createElement(PixelBtn, {
+            label: selectedPlant ? '\uD83C\uDF3F ' + (selectedPlant.nickname || selectedPlant.genus || 'Plant') : '\uD83C\uDF3F Pick a plant',
+            onClick: function() { setOpen(!open); },
+            color: selectedPlant ? '#1A5A1A' : '#2A2A1A',
+            small: true,
+            active: open,
+        }),
+        open && React.createElement(RPGFrame, { borderColor: '#3A5A28', bgColor: '#060A04', style: {
+            marginTop: 6, maxHeight: 150, overflowY: 'auto',
         }},
             React.createElement('input', {
                 value: search, onChange: function(e) { setSearch(e.target.value); },
-                placeholder: 'Search...', autoFocus: true,
+                placeholder: 'Search plants...', autoFocus: true,
                 style: Object.assign({}, pxS, {
-                    width: '100%', fontSize: '11px', padding: '4px 6px', marginBottom: 4,
-                    border: '1px solid ' + theme.cardBorder, background: 'rgba(0,0,0,0.3)',
-                    color: '#C8C8C8', outline: 'none', boxSizing: 'border-box', borderRadius: 2,
+                    width: '100%', fontSize: '16px', padding: '4px 6px', marginBottom: 4,
+                    border: '2px solid #3A5A28', background: '#040804',
+                    color: '#C8E8A8', outline: 'none', boxSizing: 'border-box',
                 })
             }),
             React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 3 } },
-                React.createElement('button', { type: 'button', onClick: function() { setSelectedPlant(null); setOpen(false); setSearch(''); },
-                    style: Object.assign({}, pxS, { fontSize: '10px', padding: '2px 7px', cursor: 'pointer', background: !selectedPlant ? '#1A3A1A' : 'transparent', border: '1px solid ' + theme.cardBorder, color: '#8A9A78', borderRadius: 2 })
-                }, 'None'),
+                React.createElement(PixelBtn, {
+                    label: 'None', onClick: function() { setSelectedPlant(null); setOpen(false); setSearch(''); },
+                    color: !selectedPlant ? '#1A5A1A' : '#1A1A1A', small: true,
+                }),
                 filtered.map(function(p) {
                     var active = selectedPlant && selectedPlant.uid === p.uid;
-                    return React.createElement('button', { key: p.uid, type: 'button', onClick: function() { setSelectedPlant(p); setOpen(false); setSearch(''); },
-                        style: Object.assign({}, pxS, { fontSize: '10px', padding: '2px 7px', cursor: 'pointer', background: active ? '#1A3A1A' : 'transparent', border: '1px solid ' + (active ? '#2E7A2E' : theme.cardBorder), color: active ? '#A8E89C' : '#C8C8C8', borderRadius: 2 })
-                    }, p.nickname || p.genus || p.uid);
+                    return React.createElement(PixelBtn, {
+                        key: p.uid, label: p.nickname || p.genus || p.uid,
+                        onClick: function() { setSelectedPlant(p); setOpen(false); setSearch(''); },
+                        color: active ? '#1A5A1A' : '#1A1A1A', small: true, active: active,
+                    });
                 })
             )
         )
@@ -3001,7 +3299,7 @@ function CarlClassicScreen() {
         : plants.slice(0, 20);
 
     return React.createElement('div', { style: {
-        display: 'flex', flexDirection: 'column', height: '100vh', maxHeight: '100vh',
+        display: 'flex', flexDirection: 'column', height: '100%', maxHeight: '100%', flex: 1, minHeight: 0,
         background: theme.bg, overflow: 'hidden',
     }},
         React.createElement('div', { style: {
@@ -3164,6 +3462,10 @@ window.ChatConversationScreen = ChatConversationScreen;
 window.GroupChatPanel = GroupChatPanel;
 window.CHAT_CHARACTERS = CHAT_CHARACTERS;
 window.CHAT_PRESET_GROUPS = CHAT_PRESET_GROUPS;
+window.PixelBtn = PixelBtn;
+window.RPGFrame = RPGFrame;
+window.detectEmotion = detectEmotion;
+window.buildEmotionalContext = buildEmotionalContext;
 window.kbCacheLoad = kbCacheLoad;
 window.kbCacheGet = kbCacheGet;
 window.kbPersonality = kbPersonality;

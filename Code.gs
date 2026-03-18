@@ -77,23 +77,7 @@ const PLANTOS_BACKEND_CFG = {
 
 /* ===================== MENU ===================== */
 
-function plantosBuildMenu_() {
-  const ui = SpreadsheetApp.getUi();
-  ui.createMenu('PlantOS')
-    .addItem('Set Web App URL (manual)', 'plantosMenuSetWebAppUrlManual')
-    .addItem('Confirm Web App URL (auto)', 'plantosMenuConfirmWebAppUrlAuto')
-    .addSeparator()
-    .addItem('Wipe Previous Deployments (IDs/URLs)', 'plantosMenuWipeDeploymentFields')
-    .addItem('Rebuild Deployments (links/folders/docs/QR)', 'plantosMenuRebuildStart')
-    .addItem('Continue Rebuild (resume)', 'plantosMenuRebuildContinue')
-    .addItem('Fix QR Columns / Links', 'plantosMenuFixQrColumnsLinks')
-    .addItem('Backfill Missing UIDs', 'plantosMenuBackfillUids')
-    .addSeparator()
-    .addItem('STOP (clear rebuild cursor)', 'plantosMenuStop')
-    .addSeparator()
-    .addItem('Diagnostics (sanity check)', 'plantosMenuDiagnostics')
-    .addToUi();
-}
+/* plantosBuildMenu_ removed — menu is built in onOpen() */
 
 function plantosMenuSetWebAppUrlManual() {
   const ui = SpreadsheetApp.getUi();
@@ -2464,44 +2448,46 @@ function onEdit(e) {
 /* ===================== onOpen ===================== */
 
 function onOpen() {
-  const ui   = SpreadsheetApp.getUi();
-  const menu = ui.createMenu('🌿 PlantOS')
-    .addItem('Set Web App URL (manual)',                'plantosMenuSetWebAppUrlManual')
-    .addItem('Confirm Web App URL (auto-detect)',       'plantosMenuConfirmWebAppUrlAuto')
+  var ui   = SpreadsheetApp.getUi();
+  var menu = ui.createMenu('🌿 PlantOS')
+    .addItem('Rebuild Deployments',        'plantosMenuRebuildStart')
+    .addItem('Continue Rebuild',           'plantosMenuRebuildContinue')
+    .addItem('STOP Rebuild',               'plantosMenuStop')
     .addSeparator()
-    .addItem('Wipe Deployment Fields (IDs/URLs only)', 'plantosMenuWipeDeploymentFields')
-    .addItem('Rebuild Deployments (folders/QR/links)', 'plantosMenuRebuildStart')
-    .addItem('Continue Rebuild (resume)',               'plantosMenuRebuildContinue')
+    .addItem('Backfill Missing UIDs',      'plantosMenuBackfillUids')
+    .addItem('Delete Blank Rows',          'plantosMenuCleanBlankRows')
+    .addItem('Generate QR Label Sheet',    'plantosMenuGenerateQrLabels')
     .addSeparator()
-    .addItem('🧹 Delete blank/garbage rows',           'plantosMenuCleanBlankRows')
-    .addItem('🔢 Backfill Missing Plant UIDs',          'plantosMenuBackfillUids')
-    .addItem('⚙ Add Missing Columns (Pot Material etc)', 'plantosEnsureOptionalColumns')
+    .addItem('Diagnostics',                'plantosMenuDiagnostics')
     .addSeparator()
-    .addItem('Generate QR Label Sheet',                'plantosMenuGenerateQrLabels')
-    .addSeparator()
-    .addItem('STOP (clear rebuild cursor)',             'plantosMenuStop')
-    .addItem('Diagnostics',                            'plantosMenuDiagnostics')
-    .addSeparator()
+    .addSubMenu(
+      ui.createMenu('⚙ Setup')
+        .addItem('Set Web App URL (manual)',        'plantosMenuSetWebAppUrlManual')
+        .addItem('Confirm Web App URL (auto)',      'plantosMenuConfirmWebAppUrlAuto')
+        .addSeparator()
+        .addItem('Add Missing Columns',             'plantosEnsureOptionalColumns')
+        .addItem('Fix QR Columns / Links',          'plantosMenuFixQrColumnsLinks')
+        .addSeparator()
+        .addItem('Wipe Deployment Fields',          'plantosMenuWipeDeploymentFields')
+    )
     .addSubMenu(
       ui.createMenu('📥 Import')
-        .addItem('⚙ Create Import tab (first time setup)', 'plantosImportCreateTab')
+        .addItem('Create Import Tab',               'plantosImportCreateTab')
         .addSeparator()
-        .addItem('① Recognize & Preview pasted data', 'plantosImportRecognize')
-        .addItem('② Commit Import to inventory',       'plantosImportCommit')
+        .addItem('Recognize & Preview',             'plantosImportRecognize')
+        .addItem('Commit Import',                   'plantosImportCommit')
         .addSeparator()
-        .addItem('Clear import zone',                  'plantosImportClear')
+        .addItem('Clear Import Zone',               'plantosImportClear')
     )
-    .addSeparator()
     .addSubMenu(
       ui.createMenu('🧠 Knowledge')
-        .addItem('⚙ Setup Knowledge System',        'kbSetup')
-        .addItem('⚙ Setup Name & Alias Tables',      'kbqSetupTables')
+        .addItem('Setup Knowledge System',          'kbSetup')
+        .addItem('Setup Name & Alias Tables',       'kbqSetupTables')
         .addSeparator()
-        .addItem('① Import from Paste Zone',          'kbImport')
+        .addItem('Import from Paste Zone',          'kbImport')
+        .addItem('Clear Paste Zone',                'kbClear')
         .addSeparator()
-        .addItem('Clear Paste Zone',                  'kbClear')
-        .addSeparator()
-        .addItem('Export KB to JSON (offline sync)',  'kbqExportToSheet')
+        .addItem('Export KB to JSON',               'kbqExportToSheet')
     );
   menu.addToUi();
 }

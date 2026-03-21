@@ -15889,6 +15889,67 @@ function SettingsScreen() {
 <?!= include('client/carl') ?>
 
 <script type="text/javascript">
+function CarlHomeScreen() {
+    const { navigate } = useNavigation();
+    const { plants, getAllPlantsLite } = usePlantData();
+    const theme = useTheme();
+    const [query, setQuery] = React.useState('');
+    const [loaded, setLoaded] = React.useState(false);
+
+    React.useEffect(() => {
+        if (!loaded) { getAllPlantsLite().finally(() => setLoaded(true)); }
+    }, []);
+
+    const filtered = React.useMemo(() => {
+        if (!query.trim()) return (plants || []).slice(0, 20);
+        const q = query.toLowerCase();
+        return (plants || []).filter(p => {
+            const name = (p.primary || p.genus || '').toLowerCase();
+            const nick = (p.nickname || '').toLowerCase();
+            return name.includes(q) || nick.includes(q);
+        }).slice(0, 20);
+    }, [plants, query]);
+
+    return React.createElement("div", { className: "flex flex-col pb-16 screen-enter", style: { maxWidth: 480, margin: '0 auto', padding: '0 12px' } },
+        React.createElement("div", { style: { textAlign: 'center', padding: '24px 16px 16px' } },
+            React.createElement("div", { style: { fontSize: 48, marginBottom: 8 } }, "🌿"),
+            React.createElement("div", { style: { fontFamily: 'var(--font-pixel)', fontSize: 13, color: theme.txtP, marginBottom: 6 } }, "CARL"),
+            React.createElement("div", { style: { fontSize: 13, color: theme.txtS, lineHeight: 1.5, maxWidth: 300, margin: '0 auto' } },
+                "Plant pathologist. Pick a plant to ask Carl about it.")),
+        React.createElement("input", {
+            type: "search",
+            placeholder: "Search your plants...",
+            value: query,
+            onChange: e => setQuery(e.target.value),
+            style: {
+                width: '100%', padding: '10px 14px', borderRadius: 8, border: '2px solid ' + theme.cardBorder,
+                background: theme.cardBg, color: theme.txtP, fontSize: 15, marginBottom: 12,
+                fontFamily: 'var(--font-body)', outline: 'none', boxSizing: 'border-box'
+            }
+        }),
+        !loaded && React.createElement("div", { style: { textAlign: 'center', color: theme.txtS, padding: 24 } }, "Loading plants..."),
+        loaded && filtered.length === 0 && React.createElement("div", { style: { textAlign: 'center', color: theme.txtS, padding: 24 } }, "No plants found."),
+        React.createElement("div", { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
+            filtered.map(p => React.createElement("button", {
+                key: p.uid || p.primary,
+                type: "button",
+                onClick: () => navigate('plant', { uid: p.uid }),
+                style: {
+                    display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
+                    background: theme.cardBg, border: '2px solid ' + theme.cardBorder,
+                    borderRadius: 10, cursor: 'pointer', textAlign: 'left', width: '100%'
+                }
+            },
+                React.createElement("span", { style: { fontSize: 24 } }, "🌱"),
+                React.createElement("div", null,
+                    React.createElement("div", { style: { color: theme.txtP, fontWeight: 700, fontSize: 14 } }, p.nickname || p.primary || p.genus),
+                    p.nickname && React.createElement("div", { style: { color: theme.txtS, fontSize: 12 } }, p.primary || p.genus)
+                )
+            ))
+        )
+    );
+}
+
 function AppContent() {
     React.useEffect(() => { if (!DEMO_MODE) kbCacheLoad(); }, []);
     const { route, navigate, goBack, canGoBack } = useNavigation();
@@ -15901,8 +15962,8 @@ function AppContent() {
             case 'watering': return React.createElement(WateringScreen, null);
             case 'quick-log': return React.createElement(WateringScreen, null); // merged into watering
             case 'add': return React.createElement(AddScreen, null);
-            case 'carl': { navigate('my-plants', { openTab: 'carl' }); return null; }
-            case 'carl-chat': { navigate('my-plants', { openTab: 'carl' }); return null; }
+            case 'carl': return React.createElement(CarlHomeScreen, null);
+            case 'carl-chat': return React.createElement(CarlHomeScreen, null);
             case 'my-plants': return React.createElement(MyPlantsScreen, { openTab: (route.params && route.params.openTab) ? route.params.openTab : null, prefill: (route.params && route.params.prefill) ? route.params.prefill : null });
             case 'environments': return React.createElement(EnvironmentsScreen, null);
             case 'archive': return React.createElement(ArchiveScreen, null);

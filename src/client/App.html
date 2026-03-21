@@ -658,6 +658,7 @@ const { useState, useEffect, useRef, createContext, useContext, useMemo } = Reac
 const BOOT = window.PLANTOS_BOOT || {};
 const HAS_GAS = !!(window.google && google.script && google.script.run);
 const DEMO_MODE = !HAS_GAS;
+const PLANTOS_API_URL = 'YOUR_GAS_WEBAPP_URL_HERE';
 const pxS = { fontFamily: "'Pixelify Sans', cursive" };
 const px8 = { fontFamily: "'Press Start 2P', cursive" };
 
@@ -2114,27 +2115,35 @@ function taxonCommonNames(genus) {
 }
 
 function gasCall(fn, ...args) {
-    return new Promise((resolve, reject) => {
-        if (!(window.google && google.script && google.script.run)) {
-            reject(new Error("Apps Script runtime unavailable — open via Google Sheets"));
+    return new Promise(function(resolve, reject) {
+        var token = localStorage.getItem('plantos_auth_token');
+        if (!token && fn !== 'plantosValidateToken') {
+            var err = new Error('Authentication required');
+            err.needsAuth = true;
+            window.__plantosHandleUnauth && window.__plantosHandleUnauth();
+            reject(err);
             return;
         }
-        var runner = google.script.run
-            .withSuccessHandler(resolve)
-            .withFailureHandler(function(err) {
-                var msg = (err && (err.message || err.toString())) || ('Server error calling ' + fn);
-                if (msg.indexOf('not found') !== -1 || msg.indexOf('not a function') !== -1) {
-                    msg = 'Redeploy needed: "' + fn + '" is not in your deployed Apps Script. Go to Deploy → Manage Deployments → New Version.';
-                }
-                reject(new Error(msg));
-            });
-        try {
-            var method = runner[fn];
-            if (!method || typeof method !== 'function') throw new Error('not a function');
-            method.apply(runner, args);
-        } catch(applyErr) {
-            reject(new Error('Redeploy needed: "' + fn + '" is not in your deployed Apps Script. Go to Deploy → Manage Deployments → New Version.'));
-        }
+        var body = { fn: fn, args: args };
+        if (token) body.token = token;
+        fetch(PLANTOS_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+            if (res && res.error === 'Unauthorized') {
+                localStorage.removeItem('plantos_auth_token');
+                var err = new Error('Authentication required');
+                err.needsAuth = true;
+                window.__plantosHandleUnauth && window.__plantosHandleUnauth();
+                reject(err);
+                return;
+            }
+            resolve(res);
+        })
+        .catch(reject);
     });
 }
 
@@ -5480,7 +5489,7 @@ function HomeScreen() {
             className: "nav-grid-btn hover-lift relative",
             style: { borderColor: '#2E7A2E', background: '#1A3A1A', color: '#A8E89C', boxShadow: '0 3px 0 #1A5A1A' }
         },
-            React.createElement(CarlBust, { px: 2 }),
+            React.createElement("span", { className: "nav-icon" }, "\uD83C\uDF3F"),
             React.createElement("span", null, "Carl"),
             React.createElement("span", { style: { position: 'absolute', top: -6, right: -6, background: '#2E7A2E', border: '2px solid #A8E89C', color: '#A8E89C', fontSize: '10px', fontFamily: "'Press Start 2P', cursive", padding: '1px 5px', lineHeight: 1.4 } }, "AI")),
         React.createElement("button", { type: "button", onClick: () => navigate('add'),
@@ -9278,7 +9287,7 @@ immediateActions should be an array of strings (each is one numbered step). Empt
                         React.createElement('div', { style: { position: 'absolute', top: 5, left: 6, fontSize: 11, opacity: 0.6, color: '#C8A84B' } }, '✦'),
                         React.createElement('div', { style: { position: 'absolute', top: 12, right: 5, fontSize: 8, opacity: 0.5, color: '#C8A84B' } }, '✧'),
                         React.createElement('div', { style: { position: 'absolute', top: 4, left: '50%', fontSize: 9, opacity: 0.4, color: '#C8A84B' } }, '⋆'),
-                        React.createElement(CarlBust, { px: 4 }),
+                        React.createElement("span", { className: "nav-icon" }, "\uD83C\uDF3F"),
                         React.createElement('div', { style: {
                             width: '100%',
                             background: 'linear-gradient(180deg, #D4B050 0%, #A87828 100%)',
@@ -9384,7 +9393,7 @@ immediateActions should be an array of strings (each is one numbered step). Empt
                             background: '#0E0A04',
                             overflow: 'hidden', lineHeight: 0,
                         }},
-                            React.createElement(CarlBust, { px: 2 })
+                            React.createElement("span", { className: "nav-icon" }, "\uD83C\uDF3F")
                         ),
                         React.createElement('div', { style: Object.assign({}, pxS, {
                             fontSize: '12px', padding: '10px 12px', maxWidth: '90%', lineHeight: 1.6,
@@ -15938,7 +15947,80 @@ function GasBannerTip() {
             React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', color: '#7A5528', lineHeight: 1.4 }) }, "Share \u2192 Add to Home Screen for a full-screen app experience without the Google banner.")),
         React.createElement("button", { type: "button", onClick: () => setVisible(false), style: Object.assign(Object.assign({}, pxS), { fontSize: '18px', color: '#5A3818', background: 'none', border: 'none', padding: '0 4px', cursor: 'pointer' }) }, "\u2715")));
 }
+function PlantOSAuthOverlay({ onSuccess }) {
+    const [password, setPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    function handleSubmit(e) {
+        e.preventDefault();
+        if (!password || loading) return;
+        setLoading(true);
+        setError('');
+        gasCall('plantosValidateToken', password)
+            .then(function(res) {
+                setLoading(false);
+                if (res && res.ok) {
+                    localStorage.setItem('plantos_auth_token', password);
+                    onSuccess();
+                } else {
+                    setError('Invalid password');
+                }
+            })
+            .catch(function() {
+                setLoading(false);
+                setError('Login failed. Check your connection.');
+            });
+    }
+    return React.createElement('div', {
+        style: { position: 'fixed', inset: 0, background: '#0E1A10',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }
+    },
+        React.createElement('div', {
+            style: { background: '#1A2C1E', border: '3px solid #3A6B28',
+                padding: '32px 28px', borderRadius: 8, minWidth: 280,
+                maxWidth: '90vw', textAlign: 'center', boxShadow: '0 8px 32px rgba(0,0,0,0.6)' }
+        },
+            React.createElement('div', { style: Object.assign({}, px8, { fontSize: 10, color: '#C8E8A8', marginBottom: 8 }) }, '🌿 PLANTOS'),
+            React.createElement('div', { style: Object.assign({}, pxS, { fontSize: 14, color: '#8ABF68', marginBottom: 24 }) }, 'Enter password to continue'),
+            React.createElement('form', { onSubmit: handleSubmit },
+                React.createElement('input', {
+                    type: 'password',
+                    value: password,
+                    onChange: function(e) { setPassword(e.target.value); },
+                    placeholder: 'Password',
+                    disabled: loading,
+                    autoFocus: true,
+                    style: { width: '100%', padding: '10px 12px', marginBottom: 12,
+                        background: '#0E1A10', border: '2px solid #3A6B28',
+                        color: '#C8E8A8', fontFamily: "'Pixelify Sans', cursive",
+                        fontSize: 14, borderRadius: 4, boxSizing: 'border-box', outline: 'none' }
+                }),
+                error ? React.createElement('div', {
+                    style: Object.assign({}, pxS, { color: '#E84B4B', fontSize: 12, marginBottom: 10 })
+                }, error) : null,
+                React.createElement('button', {
+                    type: 'submit',
+                    disabled: loading || !password,
+                    style: { width: '100%', padding: '10px 0',
+                        background: loading ? '#2A4B1E' : '#3A6B28',
+                        color: '#C8E8A8', border: '2px solid #5A8B48',
+                        fontFamily: "'Pixelify Sans', cursive", fontSize: 14,
+                        borderRadius: 4, cursor: loading ? 'not-allowed' : 'pointer',
+                        opacity: (loading || !password) ? 0.7 : 1 }
+                }, loading ? '...' : 'Login')
+            )
+        )
+    );
+}
 function PlantOSApp() {
+    const [authed, setAuthed] = useState(!!localStorage.getItem('plantos_auth_token'));
+    useEffect(function() {
+        window.__plantosHandleUnauth = function() { setAuthed(false); };
+        return function() { delete window.__plantosHandleUnauth; };
+    }, []);
+    if (!authed) {
+        return React.createElement(PlantOSAuthOverlay, { onSuccess: function() { setAuthed(true); } });
+    }
     return (React.createElement(ThemeProvider, null,
         React.createElement(NavigationProvider, null,
             React.createElement(PlantDataProvider, null,

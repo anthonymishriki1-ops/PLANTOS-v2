@@ -33,6 +33,91 @@ function doGet(e) {
   }
 }
 
+/* ===================== REST API (doPost) ===================== */
+
+function doPost(e) {
+  try {
+    var body = {};
+    try { body = JSON.parse(e.postData.contents); } catch(parseErr) { body = {}; }
+    var fn   = body.fn   || '';
+    var args = Array.isArray(body.args) ? body.args : [];
+    var token = body.token || '';
+
+    // Special case: token validation — skip auth check
+    if (fn === 'plantosValidateToken') {
+      var stored = PropertiesService.getScriptProperties().getProperty('PLANTOS_API_PASSWORD') || '';
+      var valid = args[0] === stored;
+      var valResult = valid ? { ok: true } : { ok: false, error: 'Invalid password' };
+      return ContentService.createTextOutput(JSON.stringify(valResult)).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Validate token for all other functions
+    var storedToken = PropertiesService.getScriptProperties().getProperty('PLANTOS_API_PASSWORD') || '';
+    if (token !== storedToken) {
+      return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'Unauthorized' })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Dispatch map
+    var dispatch = {
+      plantosHome: plantosHome,
+      plantosGetAllPlantsLite: plantosGetAllPlantsLite,
+      plantosGetPlant: plantosGetPlant,
+      plantosCreatePlant: plantosCreatePlant,
+      plantosUpdatePlant: plantosUpdatePlant,
+      plantosQuickLog: plantosQuickLog,
+      plantosBatchWater: plantosBatchWater,
+      plantosBatchFertilize: plantosBatchFertilize,
+      plantosGetRecentLog: plantosGetRecentLog,
+      plantosGetTimeline: plantosGetTimeline,
+      plantosSearch: plantosSearch,
+      plantosGetAllPhotos: plantosGetAllPhotos,
+      plantosGetLatestPhoto: plantosGetLatestPhoto,
+      plantosUploadPlantPhoto: plantosUploadPlantPhoto,
+      plantosCreateLocation: plantosCreateLocation,
+      plantosListLocations: plantosListLocations,
+      plantosGetPlantsByLocationLite: plantosGetPlantsByLocationLite,
+      plantosBatchAddPlants: plantosBatchAddPlants,
+      plantosGetOffspring: plantosGetOffspring,
+      plantosSetNickname: plantosSetNickname,
+      plantosArchivePlant: plantosArchivePlant,
+      plantosUpdateArchiveNote: plantosUpdateArchiveNote,
+      plantosGetArchive: plantosGetArchive,
+      plantosGetEnvironments: plantosGetEnvironments,
+      plantosSaveEnvironment: plantosSaveEnvironment,
+      plantosDeleteEnvironment: plantosDeleteEnvironment,
+      plantosGetLocationEnvMap: plantosGetLocationEnvMap,
+      plantosSetLocationEnv: plantosSetLocationEnv,
+      plantosGetLocationConditions: plantosGetLocationConditions,
+      plantosSetLocationCondition: plantosSetLocationCondition,
+      plantosGetProps: plantosGetProps,
+      plantosGetPropTimeline: plantosGetPropTimeline,
+      plantosCreateProp: plantosCreateProp,
+      plantosUpdatePropStatus: plantosUpdatePropStatus,
+      plantosUpdateProp: plantosUpdateProp,
+      plantosAddPropNote: plantosAddPropNote,
+      plantosGraduateProp: plantosGraduateProp,
+      plantosDebug: plantosDebug,
+      plantosDebugLocations: plantosDebugLocations,
+      kbGetPlantFacts: kbGetPlantFacts,
+      kbDump: kbDump,
+      callClaude: callClaude,
+      plantosCarlTrain: plantosCarlTrain,
+      plantosCarlGetMisses: plantosCarlGetMisses,
+      carlMigrateToKB: carlMigrateToKB,
+      carlGetConversationPatterns: carlGetConversationPatterns,
+      plantosValidateToken: plantosValidateToken
+    };
+
+    if (!dispatch[fn]) {
+      return ContentService.createTextOutput(JSON.stringify({ ok: false, error: 'Unknown function' })).setMimeType(ContentService.MimeType.JSON);
+    }
+    var result = dispatch[fn].apply(null, args);
+    return ContentService.createTextOutput(JSON.stringify(result)).setMimeType(ContentService.MimeType.JSON);
+  } catch(err) {
+    return ContentService.createTextOutput(JSON.stringify({ ok: false, error: err && err.message ? err.message : String(err) })).setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
 /* ===================== LOCATIONS ===================== */
 
 function plantosCreateLocation(name) {

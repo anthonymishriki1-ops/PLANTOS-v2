@@ -660,7 +660,7 @@ const { useState, useEffect, useRef, createContext, useContext, useMemo } = Reac
 const BOOT = window.PLANTOS_BOOT || {};
 const HAS_GAS = !!(window.google && google.script && google.script.run);
 const DEMO_MODE = !HAS_GAS;
-const PLANTOS_API_URL = 'https://script.google.com/macros/s/AKfycby8nxsZjyUGdzCqgPNW2YRnzi1XFe3_8vOIP4LviI_HSUAGFuXI_CQZqcJELgjnXIHK3A/exec';
+const PLANTOS_API_URL = 'https://script.google.com/macros/s/AKfycbw1EMhF1Mhqxtq6pQnM-K-1JkHw5rTesHwsBpaz6FFoNzc5vyzDMLwa8aIJsyjP5_cbyA/exec';
 const pxS = { fontFamily: "'Pixelify Sans', cursive" };
 const px8 = { fontFamily: "'Press Start 2P', cursive" };
 
@@ -15901,8 +15901,8 @@ function AppContent() {
             case 'watering': return React.createElement(WateringScreen, null);
             case 'quick-log': return React.createElement(WateringScreen, null); // merged into watering
             case 'add': return React.createElement(AddScreen, null);
-            case 'carl': return React.createElement(CarlHomeScreen, null);
-            case 'carl-chat': return React.createElement(CarlClassicScreen, null);
+            case 'carl': { navigate('my-plants', { openTab: 'carl' }); return null; }
+            case 'carl-chat': { navigate('my-plants', { openTab: 'carl' }); return null; }
             case 'my-plants': return React.createElement(MyPlantsScreen, { openTab: (route.params && route.params.openTab) ? route.params.openTab : null, prefill: (route.params && route.params.prefill) ? route.params.prefill : null });
             case 'environments': return React.createElement(EnvironmentsScreen, null);
             case 'archive': return React.createElement(ArchiveScreen, null);

@@ -8601,6 +8601,7 @@ function MyPlantsScreen({ openTab, prefill }) {
                             React.createElement(PlantButton, { onClick: saveEdit }, "\u2705 Save"),
                             React.createElement(PlantButton, { variant: "ghost", onClick: closeEdit }, "Cancel")))),
                     plants.length > 0 && (React.createElement("div", { className: isDesktop ? "grid grid-cols-2 gap-2" : "space-y-2" }, (plantFilter.trim() ? filteredPlants : plants).map(p => {
+                        try {
                         const uid = String(p.uid || '');
                         const sharedPatch = getSharedPatch ? getSharedPatch(uid) : null;
                         const q = sharedPatch ? Object.assign({}, p, sharedPatch) : p;
@@ -8646,6 +8647,7 @@ function MyPlantsScreen({ openTab, prefill }) {
                                     })
                                 }, '+ Schedule')
                             )));
+                        } catch(err) { return React.createElement("div", {key: p && p.uid, style:{color:'red',fontSize:11,padding:2}}, 'ROW ERR: ' + String(err)); }
                     })))))))),
             activeTab === 'props' && React.createElement(PropsSection, { locations: locations, prefill: prefill }),
             activeTab === 'phylo' && React.createElement(PhyloScreen, { inline: true }),

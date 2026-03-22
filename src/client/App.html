@@ -5324,10 +5324,11 @@ function StatusMessage({ type, message }) {
         React.createElement("span", { style: { fontFamily: "'Pixelify Sans', cursive", fontSize: '14px', fontWeight: '600' } }, message)));
 }
 function MiniThumb({ url }) {
-    return (React.createElement("div", { className: "w-[56px] h-[56px]  border-2 border-[#3C1800] overflow-hidden bg-[#D4A86A] flex items-center justify-center shrink-0" }, url
-        ? React.createElement("img", { src: url, alt: "", className: "w-full h-full object-cover" })
-        : React.createElement("span", { style: { fontFamily: "'Pixelify Sans', cursive", fontSize: '13px', color: '#2E1408', fontWeight: 900 } }, "No photo")));
+    return (React.createElement("div", { style: { width: 56, height: 56, border: '2px solid #2A5010', overflow: 'hidden', background: '#0E1A08', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 } }, url
+        ? React.createElement("img", { src: url, alt: "", style: { width: '100%', height: '100%', objectFit: 'cover' } })
+        : React.createElement("span", { style: { fontSize: '24px', lineHeight: 1 } }, "🌱")));
 }
+
 function HomeScreen() {
     const { navigate } = useNavigation();
     const { homeData, refreshHome } = usePlantData();
@@ -5564,7 +5565,7 @@ function HomeScreen() {
                     React.createElement(PlantCard, null,
                         React.createElement(NavGrid, null))))));
     }
-    return (React.createElement("div", { className: `flex flex-col ${pad} w-full pb-16 screen-enter`, style: { maxWidth: maxW, margin: '0 auto' } },
+    return (React.createElement("div", { className: `flex flex-col ${pad} w-full pb-4 screen-enter`, style: { maxWidth: maxW, margin: '0 auto' } },
         React.createElement(Header, null),
         React.createElement(HomeGreeting, null),
         React.createElement(StatsBar, null),
@@ -8000,29 +8001,10 @@ function MyPlantsScreen({ openTab, prefill }) {
         return () => { alive = false; };
     }, [selectedLocs]);
     useEffect(() => {
-        let alive = true;
-        (async () => {
-            const list = [...(plants || []), ...(globalResults || [])];
-            const next = {};
-            for (let i = 0; i < list.length; i++) {
-                const uid = String(list[i].uid || '');
-                if (!uid)
-                    continue;
-                if (thumbs[uid] || next[uid])
-                    continue;
-                try {
-                    const res = await getLatestPhoto(uid);
-                    if (res && res.ok && res.photo && res.photo.thumbUrl)
-                        next[uid] = res.photo.thumbUrl;
-                }
-                catch (e) { }
-            }
-            if (!alive)
-                return;
-            if (Object.keys(next).length)
-                setThumbs(prev => (Object.assign(Object.assign({}, prev), next)));
-        })();
-        return () => { alive = false; };
+        var list = [...(plants || []), ...(globalResults || [])];
+        var next = {};
+        list.forEach(function(p) { var uid = String(p.uid || ''); if (uid && p.thumbUrl) next[uid] = p.thumbUrl; });
+        if (Object.keys(next).length) setThumbs(function(prev) { return Object.assign({}, prev, next); });
     }, [plants, globalResults]);
     function openPlant(uid) { navigate('plant', { uid }); }
     useEffect(() => {
@@ -15894,7 +15876,7 @@ function CarlHomeScreen() {
         const q = query.toLowerCase();
         return list.filter(p => (p.primary||p.genus||'').toLowerCase().includes(q)||(p.nickname||'').toLowerCase().includes(q)).slice(0,30);
     }, [allPlantsCache, query]);
-    return React.createElement('div', { className: 'flex flex-col pb-16 screen-enter', style: { maxWidth: 480, margin: '0 auto', padding: '0 12px' } },
+    return React.createElement('div', { className: 'flex flex-col pb-4 screen-enter', style: { maxWidth: 480, margin: '0 auto', padding: '0 12px' } },
         React.createElement('div', { style: { textAlign: 'center', padding: '24px 16px 16px' } },
             React.createElement('div', { style: { fontSize: 48, marginBottom: 8 } }, '\uD83C\uDF3F'),
             React.createElement('div', { style: { fontFamily: 'var(--font-pixel)', fontSize: 13, color: theme.txtP, marginBottom: 6 } }, 'CARL'),
@@ -15924,7 +15906,7 @@ function AppContent() {
             case 'home': return React.createElement(HomeScreen, null);
             case 'plant': return React.createElement(PlantScreen, { uid: (route.params && route.params.uid) ? route.params.uid : '' });
             case 'watering': return React.createElement(WateringScreen, null);
-            case 'quick-log': return React.createElement(WateringScreen, null); // merged into watering
+            case 'quick-log': return React.createElement(WateringScreen, null);
             case 'add': return React.createElement(AddScreen, null);
             case 'carl': return React.createElement(CarlHomeScreen, null);
             case 'carl-chat': return React.createElement(CarlClassicScreen, null);
@@ -15948,15 +15930,27 @@ function AppContent() {
     return (React.createElement("div", { style: { display: 'flex', flexDirection: 'column', width: '100%', flex: 1, minHeight: 0, overflow: 'hidden', position: 'relative' } },
         React.createElement(SceneBackground, null),
         showTopLeftNav && (React.createElement("div", { style: {
-                position: 'absolute',
-                top: isDesktop ? 16 : 'calc(12px + env(safe-area-inset-top))',
-                left: isDesktop ? 16 : 12,
-                zIndex: 30
-            } }, canGoBack ? (React.createElement(PlantButton, { onClick: goBack, variant: "secondary", className: "px-3 py-2" }, "\< Back")) : (React.createElement(PlantButton, { onClick: () => navigate('home'), variant: "secondary", className: "px-3 py-2" }, "\uD83C\uDFE0 Home")))),
+                position: 'relative', zIndex: 30, display: 'flex', alignItems: 'center', gap: 6,
+                padding: '6px 10px', borderBottom: '2px solid #2A4010', background: '#0A1208',
+            } },
+            canGoBack && React.createElement("button", {
+                onClick: goBack,
+                style: { fontFamily: "'Press Start 2P',monospace", fontSize: 9, padding: '7px 12px', background: 'transparent', border: '2px solid #3A5A18', color: '#8AC868', cursor: 'pointer' }
+            }, "< Back"),
+            React.createElement("button", {
+                onClick: () => navigate('home'),
+                style: { fontFamily: "'Press Start 2P',monospace", fontSize: 9, padding: '7px 10px', background: 'transparent', border: '2px solid #3A5A18', color: '#8AC868', cursor: 'pointer' }
+            }, "🏠"),
+            React.createElement("div", { style: { flex: 1 } }),
+            React.createElement("button", {
+                onClick: () => window.location.reload(),
+                style: { fontFamily: "'Press Start 2P',monospace", fontSize: 11, padding: '7px 10px', background: 'transparent', border: '2px solid #3A5A18', color: '#8AC868', cursor: 'pointer' }
+            }, "↻")
+        )),
         React.createElement("div", { className: "scroll-y", style: { flex: 1, minHeight: 0, position: 'relative', zIndex: 10, overflowY: 'auto',
-                paddingTop: isDesktop ? 0 : 4 } }, render()),
-        React.createElement(BottomNav, { current: currentScreen, navigate: navigate, goBack: goBack })));
+                paddingTop: 0, background: currentScreen !== 'home' ? '#1A2A10' : undefined } }, render())));
 }
+
 function GasBannerTip() {
     const { isMobile } = useScreenSize();
     const [visible, setVisible] = React.useState(true);

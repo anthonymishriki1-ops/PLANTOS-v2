@@ -1,4 +1,4 @@
-﻿
+﻿﻿
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -2118,17 +2118,27 @@ function gasCall(fn, ...args) {
     return new Promise(function(resolve, reject) {
         var token = localStorage.getItem('plantos_auth_token') || '';
         var body = { fn: fn, args: args, token: token };
+        var controller = new AbortController();
+        var timeoutId = setTimeout(function() { controller.abort(); }, 30000);
         fetch(PLANTOS_API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain' },
-            body: JSON.stringify(body)
+            body: JSON.stringify(body),
+            signal: controller.signal
         })
-        .then(function(r) { return r.json(); })
+        .then(function(r) { clearTimeout(timeoutId); return r.json(); })
         .then(function(res) {
             if (res && res.error === 'Unauthorized') { reject(new Error('Unauthorized')); return; }
             resolve(res);
         })
-        .catch(reject);
+        .catch(function(err) {
+            clearTimeout(timeoutId);
+            if (err && err.name === 'AbortError') {
+                reject(new Error('Request timed out after 30s. GAS may be cold-starting — try again.'));
+            } else {
+                reject(err);
+            }
+        });
     });
 }
 
@@ -6408,7 +6418,7 @@ function QuickLogScreen() {
     function matchesSubstrate(p) { const t = substrateText(p); const free = String(subFree || '').trim().toLowerCase(); const presetOk = !subPreset || t === String(subPreset).toLowerCase(); const freeOk = !free || t.includes(free); return presetOk && freeOk; }
     function matchesTaxa(p) { const g = inferGenus(p); if (genusPick && String(g).toLowerCase() !== String(genusPick).toLowerCase())
         return false; const q2 = String(taxaFree || '').trim().toLowerCase(); if (!q2)
-        return true; const hay = [p.genus, p.species, p.taxon, p.gs, p.classification, p.primary, p.nickname].map(x => String(x || '')).join(' ΓÇó ').toLowerCase(); return hay.includes(q2); }
+        return true; const hay = [p.genus, p.species, p.taxon, p.gs, p.classification, p.primary, p.nickname].map(x => String(x || '')).join(' • ').toLowerCase(); return hay.includes(q2); }
     const groupMatches = useMemo(() => { const list = groupPlants || []; return list.filter(p => matchesSubstrate(p) && matchesTaxa(p)); }, [groupPlants, subPreset, subFree, genusPick, taxaFree]);
     useEffect(() => {
         if (pickMode !== 'group')
@@ -6483,7 +6493,7 @@ function QuickLogScreen() {
                                 React.createElement(MiniThumb, { url: thumbs[uid] }),
                                 React.createElement("div", { className: "min-w-0 flex-1 cursor-pointer", onClick: () => open(uid) },
                                     React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontWeight: 900, color: '#2C1000' }), className: "truncate" }, primary),
-                                    React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '12px', color: '#2E1408' }), className: "truncate" }, [cls, loc].filter(Boolean).join(' ΓÇó ')))),
+                                    React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '12px', color: '#2E1408' }), className: "truncate" }, [cls, loc].filter(Boolean).join(' • ')))),
                             React.createElement("div", { className: "flex gap-2 shrink-0" }, mode === 'multi'
                                 ? React.createElement("input", { type: "checkbox", className: "w-5 h-5", checked: !!selected[uid], onChange: () => toggle(uid), title: "Select" })
                                 : (React.createElement(React.Fragment, null,
@@ -6532,7 +6542,7 @@ function QuickLogScreen() {
                         !groupLoading && groupMatches.map(p => {
                             const uid = String(p.uid || '');
                             const primary = p.primary || p.nickname || p.gs || p.classification || uid;
-                            const sub = [p.classification || '', p.substrate || p.medium || ''].filter(Boolean).join(' ΓÇó ');
+                            const sub = [p.classification || '', p.substrate || p.medium || ''].filter(Boolean).join(' • ');
                             return (React.createElement("div", { key: uid, className: " border-2 border-[#7A4A1A]  p-2 flex items-center justify-between gap-2" },
                                 React.createElement("div", { className: "flex items-center gap-2 min-w-0 flex-1" },
                                     React.createElement(MiniThumb, { url: thumbs[uid] }),
@@ -6625,8 +6635,8 @@ function TaxonAutocomplete({ value, onChange, onSelectGenus, placeholder, theme,
         ),
         React.createElement('div', { style: Object.assign({ fontSize: '13px', color: theme.txtS, marginTop: 1 }, pxS) },
           commonLine,
-          r.entry.light ? ` ΓÇó ${r.entry.light}` : '',
-          r.entry.water ? ` ΓÇó ≡ƒÆº every ~${r.entry.water}d` : ''
+          r.entry.light ? ` • ${r.entry.light}` : '',
+          r.entry.water ? ` • ≡ƒÆº every ~${r.entry.water}d` : ''
         )
       );
     }))
@@ -6978,7 +6988,7 @@ async function generateCareBrief(plant, physics, env, recentTimeline) {
     let intervalAdvice = '';
     if (offBy >= 2) intervalAdvice = `Try watering about every ${Math.round(suggestedDays)} days for current conditions (you have ${currentDays} days).`;
 
-    const physicsRead = `Dry-down: ${drySpeed.toFixed(1)}/10  ΓÇó  Rot risk: ${rotRisk.toFixed(1)}/10  ΓÇó  Suggested interval: ~${Math.round(suggestedDays)}d`;
+    const physicsRead = `Dry-down: ${drySpeed.toFixed(1)}/10  •  Rot risk: ${rotRisk.toFixed(1)}/10  •  Suggested interval: ~${Math.round(suggestedDays)}d`;
 
     if (!reasons.length) reasons.push('No major red flags detected from available data');
 
@@ -7113,13 +7123,13 @@ function CareBriefPanel({ plant, physics, env, recentTimeline, onBriefGenerated,
 
             (brief.score !== undefined && brief.score !== null) && React.createElement('div', { style: Object.assign({}, pxS, {
                 fontSize: '13px', color: theme.txtS, marginTop: 6 }) },
-                `Score: ${brief.score}  ΓÇó  Verdict: ${vs ? vs.label.replace(/^[^ ]+\s*/, '') : ''}`),
+                `Score: ${brief.score}  •  Verdict: ${vs ? vs.label.replace(/^[^ ]+\s*/, '') : ''}`),
 
             (brief.reasons && brief.reasons.length > 0) && React.createElement('div', { style: { marginTop: 6 } },
                 React.createElement('div', { style: Object.assign({}, px8, { color: theme.txtS, marginBottom: 3 }) }, 'WHY'),
                 brief.reasons.slice(0, 4).map((r, i) => React.createElement('div', { key: i,
                     style: Object.assign({}, pxS, { fontSize: '14px', color: theme.txtP, lineHeight: 1.45, padding: '2px 0' }) },
-                    `ΓÇó ${r}`))
+                    `• ${r}`))
             ),
 
             brief.intervalAdvice && React.createElement('div', { style: Object.assign({}, pxS, {
@@ -7935,7 +7945,7 @@ function MyPlantsScreen({ openTab, prefill }) {
             const nickname = String(p.nickname || '').trim();
             const title = nickname || displaySci;
             const tax = nickname ? sciName : '';
-            const line2 = [tax, p.location].filter(Boolean).join(' ΓÇó ');
+            const line2 = [tax, p.location].filter(Boolean).join(' • ');
             return Object.assign(Object.assign({}, p), { _title: title, _tax: tax, _line2: line2 });
         });
     }
@@ -8070,7 +8080,7 @@ function MyPlantsScreen({ openTab, prefill }) {
             const _gsGenus = _gs.split(' ')[0] || '';
             const _cls = String(p.classification || '').trim();
             const _clsGenus = _cls.includes(' ') ? _cls.split(' ')[0] : '';
-            const hay = [p._title, p._tax, p._line2, p.uid, p.genus, p.species, p.taxon, p.classification, _gsGenus, _clsGenus].map(x => String(x || '')).join(' ΓÇó ').toLowerCase();
+            const hay = [p._title, p._tax, p._line2, p.uid, p.genus, p.species, p.taxon, p.classification, _gsGenus, _clsGenus].map(x => String(x || '')).join(' • ').toLowerCase();
             return hay.includes(q);
         });
     }, [plantFilter, plants]);
@@ -8604,7 +8614,7 @@ function MyPlantsScreen({ openTab, prefill }) {
                         const q = sharedPatch ? Object.assign({}, p, sharedPatch) : p;
                         const title = q.nickname || q._title || q.primary || q.gs || q.classification || uid;
                         const tax = q.nickname ? (q.gs || q._tax || q.classification || '') : (q._tax || q.gs || q.classification || '');
-                        const subtitle = q.nickname ? [tax, q.location].filter(Boolean).join(' ΓÇó ') : (q.location ? '\uD83D\uDCCD ' + q.location : '');
+                        const subtitle = q.nickname ? [tax, q.location].filter(Boolean).join(' • ') : (q.location ? '\uD83D\uDCCD ' + q.location : '');
                         var qWaterD = Number(q.waterEveryDays || q.everyDays || 0);
                         var qFertD  = Number(q.fertEveryDays || q.fertilizeEveryDays || 0);
                         var schedIncomplete = qWaterD === 0;
@@ -9219,7 +9229,7 @@ immediateActions should be an array of strings (each is one numbered step). Empt
                             isPest && React.createElement('span', { style: { color: theme.txtS, fontSize: 12 } }, 'ΓÇ║')),
                         !isPest && entry.treatment && React.createElement('div', { style: { padding: '0 12px 10px' } },
                             entry.treatment.slice(0, 2).map((t, i) =>
-                                React.createElement('div', { key: i, style: Object.assign({}, pxS, { fontSize: '14px', color: theme.txtP, padding: '2px 0', paddingLeft: 8, borderLeft: `3px solid ${theme.btnP.bg}` }) }, `ΓÇó ${t}`))))),
+                                React.createElement('div', { key: i, style: Object.assign({}, pxS, { fontSize: '14px', color: theme.txtP, padding: '2px 0', paddingLeft: 8, borderLeft: `3px solid ${theme.btnP.bg}` }) }, `• ${t}`))))),
             React.createElement('div', { style: { marginTop: 10, display: 'flex', alignItems: 'center', gap: 8 } },
                 React.createElement(PlantButton, { variant: 'secondary', onClick: () => { setSelected([]); setStep('ai'); }, className: 'py-1 px-3' }, "≡ƒî┐ Ask Carl instead"),
                 React.createElement('span', { style: Object.assign({}, pxS, { fontSize: '13px', color: theme.txtS }) }, 'AI ΓÇö knows beyond the database'))),
@@ -9250,7 +9260,7 @@ immediateActions should be an array of strings (each is one numbered step). Empt
                     React.createElement('div', { style: Object.assign({}, px8S, { color: theme.txtP, marginBottom: 6 }) }, 'PREVENTION'),
                     React.createElement('div', null,
                         p.prevention.map((t, i) =>
-                            React.createElement('div', { key: i, style: Object.assign({}, pxS, { fontSize: '14px', color: theme.txtS, padding: '3px 0', paddingLeft: 12, borderLeft: `3px solid ${theme.btnP.bg}` }) }, `ΓÇó ${t}`))));
+                            React.createElement('div', { key: i, style: Object.assign({}, pxS, { fontSize: '14px', color: theme.txtS, padding: '3px 0', paddingLeft: 12, borderLeft: `3px solid ${theme.btnP.bg}` }) }, `• ${t}`))));
             })()),
 
         step === 'ai' && React.createElement(React.Fragment, null,
@@ -10273,7 +10283,7 @@ function PropsSection({ locations, prefill }) {
                         (timeline || []).map((entry, i) => {
                             const icons = { CREATED: '≡ƒî▒', STATUS: '≡ƒôê', NOTE: '≡ƒô¥', PHOTO: '≡ƒô╕' };
                             return (React.createElement("div", { key: i, style: { display: 'flex', gap: 8, padding: '4px 0', borderBottom: i < timeline.length - 1 ? `1px solid ${theme.rowBorder}` : 'none' } },
-                                React.createElement("span", { style: { fontSize: 12, flexShrink: 0 } }, icons[entry.action] || 'ΓÇó'),
+                                React.createElement("span", { style: { fontSize: 12, flexShrink: 0 } }, icons[entry.action] || '•'),
                                 React.createElement("div", { style: { flex: 1, minWidth: 0 } },
                                     React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtP }) }, entry.details),
                                     React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '12px', color: '#aaa' }) }, entry.ts))));
@@ -15171,7 +15181,7 @@ function HomeGreeting() {
                                         '\uD83D\uDCA7 Water ' + DOW_FULL[new Date(key + 'T12:00:00').getDay()]),
                                     waterList.map(function(name, i) {
                                         return React.createElement('div', { key: i, style: Object.assign({}, pxS, { fontSize: '11px', color: '#C8E8C0', lineHeight: 1.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 180 }) },
-                                            'ΓÇó ' + name);
+                                            '• ' + name);
                                     })
                                 )
                             ),
@@ -15209,7 +15219,7 @@ function HomeGreeting() {
                                         '\uD83C\uDF31 Fertilize ' + DOW_FULL[new Date(key + 'T12:00:00').getDay()]),
                                     fertList.map(function(name, i) {
                                         return React.createElement('div', { key: i, style: Object.assign({}, pxS, { fontSize: '11px', color: '#C8E8C0', lineHeight: 1.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 180 }) },
-                                            'ΓÇó ' + name);
+                                            '• ' + name);
                                     })
                                 )
                             )
@@ -15730,7 +15740,7 @@ function DiaryScreen({ uid, name }) {
             loading && React.createElement(StatusMessage, { type: "loading", message: "Loading diary..." }),
             !loading && filtered.length === 0 && (React.createElement(StatusMessage, { type: "info", message: filter === 'ALL' ? 'No diary entries yet. Log some care to get started.' : `No ${filter} entries.` })),
             !loading && filtered.length > 0 && (React.createElement("div", { style: { display: 'flex', flexDirection: 'column', gap: 0 } }, filtered.map((t, i) => {
-                const icon = ICONS[t.action] || 'ΓÇó';
+                const icon = ICONS[t.action] || '•';
                 const isLast = i === filtered.length - 1;
                 const actionColor = t.action === 'WATERED' || t.action === 'WATER' ? '#1565C0'
                     : t.action === 'FERTILIZED' || t.action === 'FERTILIZE' ? '#2E7D32'

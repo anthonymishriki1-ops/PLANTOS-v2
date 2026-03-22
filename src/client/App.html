@@ -5385,7 +5385,7 @@ function HomeScreen() {
                 allUrgent.length > cap && React.createElement("button", {
                     type: "button", onClick: () => navigate('watering'),
                     style: Object.assign({}, pxS, { fontSize: '12px', color: 'var(--c-urgent)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', fontWeight: 900 })
-                }, "See all \u203A")),
+                }, "See all \>")),
             React.createElement("div", { className: isDesktop ? "grid grid-cols-2 gap-2" : "space-y-2" },
                 allUrgent.slice(0, cap).map((p, i) => React.createElement("div", {
                     key: (p._urgentType || '') + '-' + (p.uid || i),
@@ -9889,7 +9889,7 @@ function PropsSection({ locations, prefill }) {
                             React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtS, fontWeight: 800, marginBottom: 4 }) }, '\uD83D\uDD0D Parent plant (from your collection)'),
                             React.createElement(SpecimenSearchInput, { placeholder: 'Search collection...', value: form.parentUID, onChange: (uid, plant) => setForm(prev => Object.assign(Object.assign({}, prev), { parentUID: uid ? String(uid) : '', genus: plant && plant.genus ? plant.genus : prev.genus, species: plant && (plant.taxon || plant.species) ? (plant.taxon || plant.species) : prev.species })), theme: theme, pxS: pxS }),
                             form.genus && React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', color: theme.btnP.bg, marginTop: 3 }) }, '\uD83C\uDF3F ' + form.genus + (form.species ? ' ' + form.species : '') + ' \u00B7 auto-filled'),
-                            React.createElement("button", { type: "button", onClick: () => { setParentInCollection(null); setForm(prev => Object.assign(Object.assign({}, prev), { parentUID: '', genus: '', species: '' })); }, style: Object.assign(Object.assign({}, pxS), { marginTop: 6, fontSize: '13px', background: 'none', border: 'none', cursor: 'pointer', color: theme.txtS, textDecoration: 'underline', padding: 0 }) }, '\u2190 change answer')
+                            React.createElement("button", { type: "button", onClick: () => { setParentInCollection(null); setForm(prev => Object.assign(Object.assign({}, prev), { parentUID: '', genus: '', species: '' })); }, style: Object.assign(Object.assign({}, pxS), { marginTop: 6, fontSize: '13px', background: 'none', border: 'none', cursor: 'pointer', color: theme.txtS, textDecoration: 'underline', padding: 0 }) }, '\< change answer')
                         ),
                         React.createElement("div", null,
                             React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtS, fontWeight: 800, marginBottom: 2 }) }, 'Start Date'),
@@ -9925,7 +9925,7 @@ function PropsSection({ locations, prefill }) {
                                 ? React.createElement(React.Fragment, null,
                                     React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', color: theme.txtS, marginBottom: 4 }) }, 'Parent name (free text)'),
                                     React.createElement("input", { type: "text", placeholder: "e.g. Monstera deliciosa (neighbour's plant)", value: form.parentFreetext || '', onChange: e => setForm(prev => (Object.assign(Object.assign({}, prev), { parentFreetext: e.target.value }))), className: "w-full border-4 px-2 py-1.5", style: Object.assign(Object.assign({}, pxS), { fontSize: '12px', color: theme.txtP, borderColor: theme.cardBorder, background: theme.cardBg }) }),
-                                    React.createElement("button", { type: "button", onClick: () => setParentInCollection(null), style: Object.assign(Object.assign({}, pxS), { marginTop: 4, fontSize: '13px', background: 'none', border: 'none', cursor: 'pointer', color: theme.txtS, textDecoration: 'underline', padding: 0 }) }, '\u2190 change answer'))
+                                    React.createElement("button", { type: "button", onClick: () => setParentInCollection(null), style: Object.assign(Object.assign({}, pxS), { marginTop: 4, fontSize: '13px', background: 'none', border: 'none', cursor: 'pointer', color: theme.txtS, textDecoration: 'underline', padding: 0 }) }, '\< change answer'))
                                 : React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtS }) }, '\u2014')),
                         React.createElement("div", null,
                             React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtS, fontWeight: 800, marginBottom: 2 }) }, "Prop Type *"),
@@ -11319,7 +11319,7 @@ return (React.createElement("div", { className: `flex flex-col ${isSmall ? 'p-3'
                             React.createElement("div", { style: { background: theme.rowBg, border: `2px solid ${theme.rowBorder}`, padding: 8 } },
                                 React.createElement("div", { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 } },
                                     React.createElement("span", { style: { fontFamily: "'Press Start 2P',cursive", fontSize: '14px', color: theme.txtP } }, "DIARY"),
-                                    React.createElement("button", { type: "button", onClick: () => navigate('diary', { uid: plant.uid, name: plant.primary || plant.uid }), style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtS, fontWeight: 900, cursor: 'pointer', background: 'none', border: 'none' }) }, "Full \u203A")),
+                                    React.createElement("button", { type: "button", onClick: () => navigate('diary', { uid: plant.uid, name: plant.primary || plant.uid }), style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtS, fontWeight: 900, cursor: 'pointer', background: 'none', border: 'none' }) }, "Full \>")),
                                 timeline.slice(0, 6).map((t, i) => {
                                     const icons = { WATER: '\uD83D\uDCA7', FERTILIZE: '\uD83C\uDF3E', REPOT: '\uD83E\uDEB4', NOTE: '\uD83D\uDCDD', UPDATE: '\u270F\uFE0F', CREATE: '\uD83C\uDF31', REPAIR: '\uD83D\uDD27', PHOTO: '\uD83D\uDCF8' };
                                     const dotColors = { WATER: '#1A7AA0', FERTILIZE: '#8A5C10', REPOT: '#5A3810', NOTE: '#4A6A38', UPDATE: '#666', CREATE: '#2A7A18', REPAIR: '#8A4020', PHOTO: '#4A6A80' };
@@ -13968,7 +13968,7 @@ function EnvironmentsScreen() {
                 editLoc === loc && React.createElement(EditPanel, { loc: loc, key: loc })
             )),
             React.createElement('div', { style: { marginTop: 12 } },
-                React.createElement(PlantButton, { variant: 'ghost', onClick: goBack }, '\u2190 Back')
+                React.createElement(PlantButton, { variant: 'ghost', onClick: goBack }, '\< Back')
             )
         )
     );
@@ -14067,7 +14067,7 @@ function CompostModal({ plant, onClose, onDone }) {
                     DEATH_CAUSES[causeCat].label,
                     " \u2014 which specifically?"),
                 DEATH_CAUSES[causeCat].options.map(opt => (React.createElement("button", { key: opt, type: "button", style: btnStyle(cause === opt, DEATH_CAUSES[causeCat].color), onClick: () => { setCause(opt); setStep('confirm'); } }, opt))),
-                React.createElement("button", { type: "button", style: Object.assign(Object.assign({}, pxS), { fontSize: '12px', color: theme.txtS, background: 'none', border: 'none', cursor: 'pointer', marginTop: 4 }), onClick: () => setStep('cause_cat') }, "\u2190 Back"))),
+                React.createElement("button", { type: "button", style: Object.assign(Object.assign({}, pxS), { fontSize: '12px', color: theme.txtS, background: 'none', border: 'none', cursor: 'pointer', marginTop: 4 }), onClick: () => setStep('cause_cat') }, "\< Back"))),
             step === 'confirm' && (React.createElement(React.Fragment, null,
                 React.createElement("div", { style: { marginBottom: 12, padding: '8px 12px', border: `2px solid ${type === 'deceased' ? '#c0392b' : '#27ae60'}`,
                         background: type === 'deceased' ? '#fdf0ee' : '#f0fdf4' } },
@@ -14083,7 +14083,7 @@ function CompostModal({ plant, onClose, onDone }) {
                     React.createElement("textarea", { value: detail, onChange: e => setDetail(e.target.value), rows: 3, placeholder: type === 'deceased' ? 'e.g. Kept too wet over winter...' : 'e.g. Loves bright indirect light, water weekly...', style: Object.assign(Object.assign({}, pxS), { fontSize: '12px', width: '100%', border: `3px solid ${theme.cardBorder}`, padding: '8px', resize: 'none', background: theme.rowBg, color: theme.txtP }) })),
                 React.createElement("div", { style: { display: 'flex', gap: 8 } },
                     React.createElement("button", { type: "button", onClick: handleConfirm, disabled: saving, style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', fontWeight: 900, flex: 1, padding: '12px', border: `3px solid ${type === 'deceased' ? '#c0392b' : '#27ae60'}`, background: type === 'deceased' ? '#c0392b' : '#27ae60', color: '#fff', cursor: 'pointer', boxShadow: `0 3px 0 ${type === 'deceased' ? '#922b21' : '#1e8449'}` }) }, saving ? '...' : type === 'deceased' ? '≡ƒ¬ª Confirm' : '≡ƒÅá Confirm Rehome'),
-                    React.createElement("button", { type: "button", onClick: () => setStep(type === 'deceased' ? 'cause_option' : 'type'), style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', color: theme.txtS, background: 'none', border: `2px solid ${theme.rowBorder}`, padding: '12px 16px', cursor: 'pointer' }) }, "\u2190 Back")))))));
+                    React.createElement("button", { type: "button", onClick: () => setStep(type === 'deceased' ? 'cause_option' : 'type'), style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', color: theme.txtS, background: 'none', border: `2px solid ${theme.rowBorder}`, padding: '12px 16px', cursor: 'pointer' }) }, "\< Back")))))));
 }
 function PhyloScreen({ inline }) {
     const { navigate } = useNavigation();
@@ -14468,7 +14468,7 @@ function ArchiveScreen() {
                                     a.notes ? 'Edit note' : 'Add note')))))));
             }),
             React.createElement("div", { style: { marginTop: 14 } },
-                React.createElement(PlantButton, { variant: "ghost", onClick: goBack }, "\u2190 Back")))));
+                React.createElement(PlantButton, { variant: "ghost", onClick: goBack }, "\< Back")))));
 }
 function SpecScreen() {
     const { goBack } = useNavigation();
@@ -15708,7 +15708,7 @@ function DiaryScreen({ uid, name }) {
         React.createElement(PlantCard, { title: `≡ƒôô DIARY ΓÇö ${String(name || uid || '').toUpperCase()}` },
             React.createElement("div", { className: "flex gap-2 mb-3" },
                 React.createElement(PlantButton, { variant: "ghost", block: false, onClick: goBack }, "\u2039 Back"),
-                uid && (React.createElement(PlantButton, { variant: "ghost", block: false, onClick: () => navigate('plant', { uid }) }, "View Plant \u203A"))),
+                uid && (React.createElement(PlantButton, { variant: "ghost", block: false, onClick: () => navigate('plant', { uid }) }, "View Plant \>"))),
             React.createElement("div", { style: { marginBottom: 14, padding: '10px 12px', background: theme.rowBg, border: `2px solid ${theme.rowBorder}` } },
                 React.createElement("div", { style: Object.assign(Object.assign({}, px8), { color: theme.txtP, marginBottom: 6 }) }, "ADD NOTE"),
                 noteStatus && React.createElement("div", { className: "mb-2" },
@@ -15844,24 +15844,24 @@ function SettingsScreen() {
                     " When running inside Google Apps Script (the normal deployment), the URL is auto-detected and this field is not needed. This field is only needed if you're hosting the HTML file separately or testing locally.")),
             React.createElement(Section, { title: "\u26A1 QUICK ACTIONS" },
                 React.createElement(Row, { label: "Manual Log", sublabel: "Log water/fert for any plant (not on schedule)" },
-                    React.createElement(PlantButton, { block: false, variant: "secondary", onClick: () => navigate('watering') }, "Open \u203A")),
+                    React.createElement(PlantButton, { block: false, variant: "secondary", onClick: () => navigate('watering') }, "Open \>")),
                 React.createElement(Row, { label: "Plant Log", sublabel: "Full system event log" },
-                    React.createElement(PlantButton, { block: false, variant: "secondary", onClick: () => navigate('plant-log') }, "Open \u203A")),
+                    React.createElement(PlantButton, { block: false, variant: "secondary", onClick: () => navigate('plant-log') }, "Open \>")),
                 React.createElement(Row, { label: "Archive", sublabel: "Deceased & rehomed plants" },
-                    React.createElement(PlantButton, { block: false, variant: "secondary", onClick: () => navigate('archive') }, "Open \u203A")),
+                    React.createElement(PlantButton, { block: false, variant: "secondary", onClick: () => navigate('archive') }, "Open \>")),
                 React.createElement(Row, { label: "Environments", sublabel: "Manage grow spaces & physics" },
-                    React.createElement(PlantButton, { block: false, variant: "secondary", onClick: () => navigate('environments') }, "Open \u203A")),
+                    React.createElement(PlantButton, { block: false, variant: "secondary", onClick: () => navigate('environments') }, "Open \>")),
                 React.createElement(Row, { label: "Batch Water", sublabel: "Water multiple plants at once" },
-                    React.createElement(PlantButton, { block: false, variant: "secondary", onClick: () => navigate('batch-water') }, "Open \u203A")),
+                    React.createElement(PlantButton, { block: false, variant: "secondary", onClick: () => navigate('batch-water') }, "Open \>")),
                 React.createElement(Row, { label: "Batch Fertilize", sublabel: "Fertilize multiple plants at once" },
-                    React.createElement(PlantButton, { block: false, variant: "secondary", onClick: () => navigate('batch-fertilize') }, "Open \u203A"))),
+                    React.createElement(PlantButton, { block: false, variant: "secondary", onClick: () => navigate('batch-fertilize') }, "Open \>"))),
             React.createElement(Section, { title: "\u2139\uFE0F ABOUT" },
                 React.createElement(Row, { label: "Version", sublabel: "PlantOS v5" },
                     React.createElement("span", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtS }) }, "v5.0")),
                 React.createElement(Row, { label: "Mode", sublabel: HAS_GAS ? 'Live ΓÇö connected to sheet' : 'Demo ΓÇö no persistence' },
                     React.createElement("span", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', fontWeight: 900, color: HAS_GAS ? '#4CAF50' : '#FF9800' }) }, HAS_GAS ? 'LIVE' : 'DEMO')),
                 React.createElement(Row, { label: "Locations", sublabel: `${(locations || []).length} defined` },
-                    React.createElement(PlantButton, { block: false, variant: "ghost", onClick: () => navigate('locations') }, "Manage \u203A")),
+                    React.createElement(PlantButton, { block: false, variant: "ghost", onClick: () => navigate('locations') }, "Manage \>")),
             React.createElement("div", { style: { borderTop: '2px solid ' + theme.cardBorder, marginTop: 14, paddingTop: 14 } },
                 React.createElement("div", { style: Object.assign({}, px8, { fontSize: '7px', color: theme.txtS, marginBottom: 8, letterSpacing: '0.1em' }) }, 'DEVELOPER'),
                 React.createElement(PlantButton, { block: true, variant: 'ghost', onClick: function() { navigate('dev'); } }, 'Dev Tools')
@@ -15942,7 +15942,7 @@ function AppContent() {
                 top: isDesktop ? 16 : 'calc(12px + env(safe-area-inset-top))',
                 left: isDesktop ? 16 : 12,
                 zIndex: 30
-            } }, canGoBack ? (React.createElement(PlantButton, { onClick: goBack, variant: "secondary", className: "px-3 py-2" }, "\u2190 Back")) : (React.createElement(PlantButton, { onClick: () => navigate('home'), variant: "secondary", className: "px-3 py-2" }, "\uD83C\uDFE0 Home")))),
+            } }, canGoBack ? (React.createElement(PlantButton, { onClick: goBack, variant: "secondary", className: "px-3 py-2" }, "\< Back")) : (React.createElement(PlantButton, { onClick: () => navigate('home'), variant: "secondary", className: "px-3 py-2" }, "\uD83C\uDFE0 Home")))),
         React.createElement("div", { className: "scroll-y", style: { flex: 1, minHeight: 0, position: 'relative', zIndex: 10, overflowY: 'auto',
                 paddingTop: isDesktop ? 0 : 4 } }, render()),
         React.createElement(BottomNav, { current: currentScreen, navigate: navigate, goBack: goBack })));

@@ -5577,13 +5577,13 @@ function HomeScreen() {
     return (React.createElement("div", { className: `flex flex-col ${pad} w-full pb-16 screen-enter`, style: { maxWidth: maxW, margin: '0 auto' } },
         React.createElement(Header, null),
         React.createElement(HomeGreeting, null),
+        React.createElement("div", { style: { marginTop: 6 } },
+            React.createElement(NavGrid, null)),
         React.createElement(StatsBar, null),
         React.createElement(BirthdayBanner, null),
         React.createElement(HappyBanner, null),
         React.createElement(NeedsAttention, null),
-        React.createElement(UpcomingSection, null),
-        React.createElement("div", { style: { marginTop: 6 } },
-            React.createElement(NavGrid, null))));
+        React.createElement(UpcomingSection, null)));
 }
 function CustomMixBuilder({ value, onChange, growingMethod, pxS, theme }) {
     var isSemiHydro = growingMethod === 'semihydro';

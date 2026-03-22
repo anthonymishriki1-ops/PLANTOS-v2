@@ -5565,11 +5565,11 @@ function HomeScreen() {
                     React.createElement(PlantCard, null,
                         React.createElement(NavGrid, null))))));
     }
-    return (React.createElement("div", { className: `flex flex-col ${pad} w-full pb-4 screen-enter`, style: { maxWidth: maxW, margin: '0 auto' } },
+    return (React.createElement("div", { className: `flex flex-col ${pad} w-full pb-4 screen-enter`, style: { maxWidth: maxW, margin: '0 auto', paddingTop: isSmall ? 12 : 16 } },
         React.createElement(Header, null),
-        React.createElement("div", { style: { marginBottom: 6 } },
-            React.createElement(NavGrid, null)),
         React.createElement(HomeGreeting, null),
+        React.createElement("div", { style: { marginTop: 8, marginBottom: 4 } },
+            React.createElement(NavGrid, null)),
         React.createElement(StatsBar, null),
         React.createElement(BirthdayBanner, null),
         React.createElement(HappyBanner, null),

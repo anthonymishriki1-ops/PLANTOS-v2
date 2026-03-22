@@ -8600,7 +8600,7 @@ function MyPlantsScreen({ openTab, prefill }) {
 })(edit.everyDays, edit.fertilizeEveryDays || '', e => setEdit(prev => Object.assign({}, prev, { fertilizeEveryDays: e.target.value })), pxS, theme))),
                         React.createElement("div", { className: "flex gap-2 mt-3" },
                             React.createElement(PlantButton, { onClick: saveEdit }, "\u2705 Save"),
-                            React.createElement(PlantButton, { variant: "ghost", onClick: closeEdit }, "Cancel")))),
+                            React.createElement(PlantButton, { variant: "ghost", onClick: closeEdit }, "Cancel"))))),
                     plants.length > 10 && React.createElement("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 } },
                         React.createElement("button", { type: "button", onClick: function() { setPlantPage(function(p) { return Math.max(0, p - 1); }); }, disabled: plantPage === 0,
                             style: { fontFamily: "'Press Start 2P', monospace", fontSize: 10, padding: '6px 12px', cursor: plantPage === 0 ? 'default' : 'pointer', opacity: plantPage === 0 ? 0.4 : 1, background: 'transparent', border: '2px solid #7A4A1A', color: '#3C1800' } }, "< PREV"),
@@ -8659,7 +8659,7 @@ function MyPlantsScreen({ openTab, prefill }) {
             activeTab === 'phylo' && React.createElement(PhyloScreen, { inline: true }),
             React.createElement("div", { className: "mt-4 flex gap-2" },
                 React.createElement(PlantButton, { variant: "ghost", onClick: goBack }, "Back"),
-                React.createElement(PlantButton, { block: false, variant: "ghost", className: "px-3", onClick: () => navigate('archive') }, "\uD83E\uDEA6 Archive"))))));
+                React.createElement(PlantButton, { block: false, variant: "ghost", className: "px-3", onClick: () => navigate('archive') }, "\uD83E\uDEA6 Archive")))));
 }
 
 function SpecimenSearchInput({ value, onChange, theme, pxS, placeholder }) {

@@ -2122,7 +2122,7 @@ function gasCall(fn, ...args) {
         var body = { fn: fn, args: args, token: token };
         fetch(PLANTOS_API_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'text/plain' },
             body: JSON.stringify(body)
         })
         .then(function(r) { return r.json(); })

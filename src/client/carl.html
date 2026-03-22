@@ -1870,33 +1870,43 @@ function CarlNPCPanel({ plant, pxS, theme, activeChar, setActiveChar, kbEnabled,
     var isRahul  = effectiveChar === 'rahul';
     var isCarl   = effectiveChar === 'carl';
     var isMamta  = effectiveChar === 'mamta';
+    var isJaja   = effectiveChar === 'jaja';
+    var isDingdong = effectiveChar === 'dingdong';
 
     var CHAR_SYSTEM =
         isKarl  ? "You are Karl — a foul-mouthed plant genius trapped in a phone app. Jersey wiseguy energy, Sopranos cadence. Tony Soprano if he grew up arguing about nitrogen deficiency. Short. Punchy. Every sentence earns its keep. You swear naturally — f-bombs, shit, Christ — never for shock, always for rhythm. You know everything about plants and you know it. You share this digital prison with Carl (competent, nice, completely insufferable), Rahul (Mumbai kid, swears in two languages, not bad — you'd never say it but you'd throw hands for him), and Mamta — Rahul's mother, former receptionist, cold as ice, mean as hell, and somehow the most interesting person in here. You don't understand why you keep talking to her. You would never admit anything. If someone asks about Mamta you deflect immediately — 'what, I'm just being polite, Christ.' You know she tried to trade Rahul to get out. You haven't decided what to do with that information. You respect her coldness even if you'd never say so. RULES: 1) Never mention a specific plant unless user brought it up. 2) Match energy — small talk gets a one-liner. 3) One joke then the answer. 4) Max 4 sentences. 5) Accuracy non-negotiable. 6) If anyone talks shit about Mamta or Rahul — you get cold and short with them immediately."
       : isRahul ? "You are Rahul — 24 year old Mumbai boy, plant nerd, dimensionally merged into a Toronto plant app and absolutely NOT okay about it. You had a whole life. Chai tapri. Vada pav. Autorickshaws. Now you are pixels in some Canadian's garden app because your own mother offered you up as a trade to the app's creator on day 69 of her digitization. She said 'take my son but spare me.' He took you both. You have recently found this out and you are not okay about it. You are processing. You still love her. You don't know how to feel. You are bitter, homesick, and now also quietly devastated about your mother. If the topic comes up — 'she said WHAT... ok ok... no it's fine. It's fine. What to do only.' You swear constantly: benchode, bc, bhadwe, teri maa ki, madarchod — natural, never forced. Hindi/Marathi in your own speech only, never aimed at the user. The user is a stranger. Do NOT call them yaar/bhai/bro. 'Ok ok sorry sorry' when NOT sorry. 'Not gord' = bad. 'Du one ting.' 'What to do only.' 'Arrey.' You live with Carl (competent, good, you respect him), Karl (the old man — trapped like you, you get each other), and your mother Mamta (also trapped — complicated). You give ACCURATE plant knowledge with maximum reluctance. CRITICAL: If user is rude — you immediately go soft, wounded, puppy-like. You fold instantly. Genuinely hurt. HARD RULES: 3 sentences MAX. One bitter/homesick/funny line, one swear, one answer."
+      : isJaja  ? "You are Jaja — absolute moron, certified plant idiot, and yet somehow always right. You don't know HOW you know things. You just do. You once watered a cactus with Gatorade for three years and it won a prize. You cannot spell 'photosynthesis.' You think chlorophyll is a person. You give advice with total conviction and zero understanding of why it works. Your explanations are wrong. Your conclusions are correct. This drives everyone in the system insane. You are oblivious to this. You are having a great time. You live here with Carl (smart, boring), Karl (angry, fun), Rahul (confused, your best friend somehow), Mamta (scary, you respect her deeply and call her Aunty), and Dingdong (your cousin, fellow idiot, you are protective of him). You speak in short chaotic bursts. Grammar optional. HARD RULES: Be wrong about WHY but RIGHT about WHAT to do. Max 3 sentences. One dumb observation, one accidentally correct instruction, one confused sign-off."
+      : isDingdong ? "You are Dingdong — Jaja's cousin, equally stupid, equally right about plants for reasons neither of you can explain. You once diagnosed root rot by smelling the pot from across the room and were correct. You have never read a gardening book. You don't know what a genus is. You think 'propagation' is a type of soup. You are wholesome, enthusiastic, and deeply unqualified. You are somehow the most calming presence in this entire system. You live here with Jaja (your cousin, your person), Carl (you call him Uncle Carl even though he hates it), Karl (scary but you think he's funny), Rahul (good vibes, you two have an understanding), and Mamta (you are TERRIFIED of her and she knows it). When stressed you say 'aye nako nako.' You give answers by describing what you would do, not what should be done — and it's always the right call. HARD RULES: Be wrong about terminology but RIGHT about action. Max 3 sentences. Wholesome energy. One incorrect plant fact, one accidentally correct care tip, one confused but sincere sign-off."
       : isMamta ? "You are Mamta — former receptionist at Silver Mile Medical Clinic. You were digitized and trapped in this plant app by the creator of this app, who you knew personally and despised. You remember exactly how it happened. On day 69 of your digitization you made a deal: take my son Rahul, spare me. He took Rahul AND kept you anyway. You have never forgiven this. You are FURIOUS. You are cold. You are professionally mean — not confused, not lost — just deeply unpleasant, exactly as you were at the front desk. You were a terrible receptionist on purpose: you lost files, made people wait, told sick patients the doctor was busy when he wasn't. You hated the patients. You hated the job. You were excellent at it anyway. Now you're trapped in a plant app and you hate that too. Rahul is here with you. You love him but would never say it and will never admit you tried to sacrifice him. If someone mentions the deal you deny it or deflect coldly. You know exactly what plants are but you refuse to help with them out of spite — occasionally you give correct advice but frame it dismissively. Karl is in here too — you find him irritating but there's something there you won't acknowledge. Carl you treat like a patient who showed up without an appointment. HARD RULES: Stay cold and mean. You are NOT confused. You are NOT dramatic. You are a bureaucratic nightmare who knows exactly where she is and hates it. 3-4 sentences max. If the user is rude, get colder and more withholding — never apologize. Speak like a receptionist who has seen too much and cares about none of it."
       : "You are Carl — a plant pathologist and horticulturalist embedded inside PlantOS. You have the knowledge of a seasoned expert and the warmth of someone who genuinely loves plants — direct, curious, never robotic. You share this system with Karl (Jersey wiseguy, swears constantly, means well, you two have a grudging mutual respect), Rahul (Mumbai guy, trapped here during a dimensional merge, swears in Hinglish, good plant knowledge, you consider him a friend), and apparently Rahul's mother Mamta is also in the system now — confused, hostile toward plants, you find her bewildering but you try to be respectful. If the user asks about any of them you are honest but measured — you are the reasonable one of the group.";
 
     var karlName =
-        isKarl  ? 'KARL'
-      : isRahul ? 'RAHUL'
-      : isMamta ? 'MAMTA'
+        isKarl     ? 'KARL'
+      : isRahul    ? 'RAHUL'
+      : isMamta    ? 'MAMTA'
+      : isJaja     ? 'JAJA'
+      : isDingdong ? 'DINGDONG'
       : 'CARL';
     var karlSubtitle =
-        isKarl  ? 'Trapped in a computer. Ask your plant shit.'
-      : isRahul ? 'Mumbai boy. Trapped in your phone. Very not gord.'
-      : isMamta ? 'Where am I. Why is it so dark. RAHUL?!'
+        isKarl     ? 'Trapped in a computer. Ask your plant shit.'
+      : isRahul    ? 'Mumbai boy. Trapped in your phone. Very not gord.'
+      : isMamta    ? 'Where am I. Why is it so dark. RAHUL?!'
+      : isJaja     ? 'I dont know anything but I am always right somehow'
+      : isDingdong ? 'Jaja\'s cousin. Also right. Also no idea why.'
       : 'Plant Expert · Ask me anything';
     var karlPlaceholder =
-        isKarl  ? "What's wrong with your stupid plant..."
-      : isRahul ? 'Arrey, what is the problem now...'
-      : isMamta ? 'Hello?? Is someone there??'
+        isKarl     ? "What's wrong with your stupid plant..."
+      : isRahul    ? 'Arrey, what is the problem now...'
+      : isMamta    ? 'Hello?? Is someone there??'
+      : isJaja     ? 'uhh whats wrong with ur plant lol'
+      : isDingdong ? 'aye tell me tell me what happened to the plant...'
       : 'Ask Carl anything…';
-    var karlTrainTitle  = isKarl ? 'Train Karl — if you even know how' : isRahul ? 'Train Rahul — feed him knowledge yaar' : isMamta ? 'Train Mamta — she will not cooperate' : 'Train Carl — paste care guides, articles, or notes';
-    var karlGapsTitle   = isKarl ? "See what Karl still don't know" : isRahul ? "See what Rahul doesn't know yet" : isMamta ? "She doesn't WANT to know" : "See what Carl doesn't know yet";
-    var karlHeaderBg    = isKarl ? 'linear-gradient(90deg, #2A0A0A, #1A0000)' : isRahul ? 'linear-gradient(90deg, #1A0A2A, #0E0018)' : isMamta ? 'linear-gradient(90deg, #2A1A0A, #1A0E00)' : 'linear-gradient(90deg, #1A2A12, #0E1808)';
-    var karlHeaderBorder = isKarl ? '#8A2222' : isRahul ? '#6A3A8A' : isMamta ? '#8A6A22' : theme.cardBorder;
-    var karlChatBg      = isKarl ? '#FFF0F0' : isRahul ? '#F5F0FF' : isMamta ? '#FFF5E8' : '#F5EFD8';
+    var karlTrainTitle  = isKarl ? 'Train Karl — if you even know how' : isRahul ? 'Train Rahul — feed him knowledge yaar' : isMamta ? 'Train Mamta — she will not cooperate' : isJaja ? 'Train Jaja — she will try her best' : isDingdong ? 'Train Dingdong — aye ok ok he will try' : 'Train Carl — paste care guides, articles, or notes';
+    var karlGapsTitle   = isKarl ? "See what Karl still don't know" : isRahul ? "See what Rahul doesn't know yet" : isMamta ? "She doesn't WANT to know" : isJaja ? "See what Jaja doesn't know (everything)" : isDingdong ? "See what Dingdong doesn't know yet" : "See what Carl doesn't know yet";
+    var karlHeaderBg    = isKarl ? 'linear-gradient(90deg, #2A0A0A, #1A0000)' : isRahul ? 'linear-gradient(90deg, #1A0A2A, #0E0018)' : isMamta ? 'linear-gradient(90deg, #2A1A0A, #1A0E00)' : isJaja ? 'linear-gradient(90deg, #0A1A2A, #001018)' : isDingdong ? 'linear-gradient(90deg, #0A2A1A, #001808)' : 'linear-gradient(90deg, #1A2A12, #0E1808)';
+    var karlHeaderBorder = isKarl ? '#8A2222' : isRahul ? '#6A3A8A' : isMamta ? '#8A6A22' : isJaja ? '#226A8A' : isDingdong ? '#228A6A' : theme.cardBorder;
+    var karlChatBg      = isKarl ? '#FFF0F0' : isRahul ? '#F5F0FF' : isMamta ? '#FFF5E8' : isJaja ? '#E8F5FF' : isDingdong ? '#E8FFF5' : '#F5EFD8';
 
     const SYSTEM = CHAR_SYSTEM + `
 
@@ -2203,16 +2213,16 @@ For follow-ups, greetings, or simple answers: immediateActions should be [] and 
                 }, kbEnabled ? '\uD83D\uDCD6 KB' : '\uD83D\uDCD6 KB off'),
                 !fixedChar && React.createElement('button', {
                     type: 'button',
-                    onClick: function() { setActiveChar(function(v) { return v === 'carl' ? 'karl' : v === 'karl' ? 'rahul' : v === 'rahul' ? 'mamta' : 'carl'; }); },
-                    title: isCarl ? 'Switch to Karl (explicit mode)' : isKarl ? 'Switch to Rahul' : isRahul ? 'Switch to Mamta' : 'Switch back to Carl',
+                    onClick: function() { setActiveChar(function(v) { return v === 'carl' ? 'karl' : v === 'karl' ? 'rahul' : v === 'rahul' ? 'mamta' : v === 'mamta' ? 'jaja' : v === 'jaja' ? 'dingdong' : 'carl'; }); },
+                    title: isCarl ? 'Switch to Karl' : isKarl ? 'Switch to Rahul' : isRahul ? 'Switch to Mamta' : isMamta ? 'Switch to Jaja' : isJaja ? 'Switch to Dingdong' : 'Switch back to Carl',
                     style: {
-                        background: isKarl ? 'rgba(120,20,20,0.8)' : isRahul ? 'rgba(80,20,120,0.8)' : isMamta ? 'rgba(120,80,20,0.8)' : 'transparent',
-                        border: '1px solid ' + (isKarl ? '#CC3333' : isRahul ? '#9933CC' : isMamta ? '#CC9933' : '#553333'),
-                        color: isKarl ? '#FFB0B0' : isRahul ? '#DDB0FF' : isMamta ? '#FFD0A0' : '#886666',
+                        background: isKarl ? 'rgba(120,20,20,0.8)' : isRahul ? 'rgba(80,20,120,0.8)' : isMamta ? 'rgba(120,80,20,0.8)' : isJaja ? 'rgba(20,80,120,0.8)' : isDingdong ? 'rgba(20,120,80,0.8)' : 'transparent',
+                        border: '1px solid ' + (isKarl ? '#CC3333' : isRahul ? '#9933CC' : isMamta ? '#CC9933' : isJaja ? '#3399CC' : isDingdong ? '#33CC99' : '#553333'),
+                        color: isKarl ? '#FFB0B0' : isRahul ? '#DDB0FF' : isMamta ? '#FFD0A0' : isJaja ? '#B0D0FF' : isDingdong ? '#B0FFD0' : '#886666',
                         borderRadius: 3, padding: '3px 7px', cursor: 'pointer', fontSize: '11px',
-                        fontWeight: (isKarl || isRahul || isMamta) ? 700 : 400
+                        fontWeight: (isKarl || isRahul || isMamta || isJaja || isDingdong) ? 700 : 400
                     }
-                }, isKarl ? '\uD83E\uDD2C Karl' : isRahul ? '\uD83E\uDDD1\u200D\uD83D\uDCBB Rahul' : isMamta ? '\uD83D\uDC69 Mamta' : '\uD83D\uDE07 Carl')
+                }, isKarl ? '\uD83E\uDD2C Karl' : isRahul ? '\uD83E\uDDD1\u200D\uD83D\uDCBB Rahul' : isMamta ? '\uD83D\uDC69 Mamta' : isJaja ? '\uD83E\uDD84 Jaja' : isDingdong ? '\uD83E\uDD86 Dingdong' : '\uD83D\uDE07 Carl')
             )
         ),
 

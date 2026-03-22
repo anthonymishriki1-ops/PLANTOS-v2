@@ -9078,7 +9078,7 @@ immediateActions should be an array of strings (each is one numbered step). Empt
                 system: SYSTEM,
                 messages: [...claudeHistory, { role: 'user', content: queryText }]
             };
-            if (!HAS_GAS) throw new Error('Not connected to Google Apps Script. Open via Google Sheets to use Carl AI.');
+            if (!PLANTOS_API_URL) throw new Error('No API URL configured.');
             const gasResp = await gasCall('callClaude', JSON.stringify(gasPayload));
             if (!gasResp || gasResp.error) throw new Error((gasResp && gasResp.error) || 'GAS proxy failed');
 

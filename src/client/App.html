@@ -8629,9 +8629,7 @@ function MyPlantsScreen({ openTab, prefill }) {
                     })))))))),
             activeTab === 'props' && React.createElement(PropsSection, { locations: locations, prefill: prefill }),
             activeTab === 'phylo' && React.createElement(PhyloScreen, { inline: true }),
-            React.createElement("div", { className: "mt-4 flex gap-2" },
-                React.createElement(PlantButton, { variant: "ghost", onClick: goBack }, "Back"),
-                React.createElement(PlantButton, { block: false, variant: "ghost", className: "px-3", onClick: () => navigate('archive') }, "\uD83E\uDEA6 Archive"))))));
+))))));
 }
 
 function SpecimenSearchInput({ value, onChange, theme, pxS, placeholder }) {

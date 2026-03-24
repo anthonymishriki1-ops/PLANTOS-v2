@@ -621,7 +621,7 @@
 </head>
 <body>
 <div class="crt-overlay" aria-hidden="true"></div>
-<div id="andy-version" style="position:fixed;top:8px;right:12px;color:#ff4444;font-family:monospace;font-size:11px;z-index:99999;pointer-events:none;opacity:0.85;">andys version 1.0</div>
+<div id="andy-version" style="position:fixed;top:8px;right:12px;color:#ff4444;font-family:monospace;font-size:11px;z-index:99999;pointer-events:none;opacity:0.85;"></div>
 <div id="root">
   <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#1A2C1E;color:#C8A84B;font-family:monospace;font-size:12px;flex-direction:column;gap:12px;">
     <div style="font-size:32px">🌿</div>
@@ -15989,12 +15989,53 @@ function GasBannerTip() {
             React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', color: '#7A5528', lineHeight: 1.4 }) }, "Share \u2192 Add to Home Screen for a full-screen app experience without the Google banner.")),
         React.createElement("button", { type: "button", onClick: () => setVisible(false), style: Object.assign(Object.assign({}, pxS), { fontSize: '18px', color: '#5A3818', background: 'none', border: 'none', padding: '0 4px', cursor: 'pointer' }) }, "\u2715")));
 }
+const PLANTOS_VERSION = '1.1';
+
+function SplashScreen({ onEnter }) {
+  const [hover, setHover] = React.useState(false);
+  return React.createElement('div', {
+    style: {
+      display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+      height:'100%', width:'100%', background:'#1A2C1E', position:'absolute', top:0, left:0, zIndex:9999,
+    }
+  },
+    React.createElement('div', { style: { fontSize:48, marginBottom:24 } }, '🌿'),
+    React.createElement('div', {
+      style: {
+        fontFamily:"'Press Start 2P',monospace", fontSize:18, color:'#C8A84B',
+        marginBottom:8, textAlign:'center', lineHeight:1.6,
+      }
+    }, 'PlantOS'),
+    React.createElement('div', {
+      style: {
+        fontFamily:'monospace', fontSize:11, color:'#ff4444',
+        marginBottom:40, opacity:0.85,
+      }
+    }, "andys version " + PLANTOS_VERSION),
+    React.createElement('button', {
+      onClick: onEnter,
+      onMouseEnter: () => setHover(true),
+      onMouseLeave: () => setHover(false),
+      style: {
+        fontFamily:"'Press Start 2P',monospace", fontSize:12, padding:'14px 36px',
+        background: hover ? '#4A8B38' : '#3A6B28', color:'#E8FFD0',
+        border:'3px solid #2C1200', cursor:'pointer', transition:'background 0.2s',
+        boxShadow: '0 4px 0 #1A2C1E, 0 6px 12px rgba(0,0,0,0.4)',
+      }
+    }, '[ ENTER ]')
+  );
+}
+
 function PlantOSApp() {
-    return (React.createElement(ThemeProvider, null,
-        React.createElement(NavigationProvider, null,
-            React.createElement(PlantDataProvider, null,
-                React.createElement(AppContent, null),
-                React.createElement(GasBannerTip, null)))));
+  const [entered, setEntered] = React.useState(false);
+  if (!entered) {
+    return React.createElement(SplashScreen, { onEnter: () => setEntered(true) });
+  }
+  return (React.createElement(ThemeProvider, null,
+      React.createElement(NavigationProvider, null,
+          React.createElement(PlantDataProvider, null,
+              React.createElement(AppContent, null),
+              React.createElement(GasBannerTip, null)))));
 }
 class AppErrorBoundary extends React.Component {
   constructor(p) { super(p); this.state = { err: null }; }
@@ -16023,6 +16064,8 @@ if (_rootEl) {
   ReactDOM.createRoot(_rootEl).render(
     React.createElement(AppErrorBoundary, null, React.createElement(PlantOSApp, null))
   );
+  const _vEl = document.getElementById('andy-version');
+  if (_vEl) _vEl.textContent = 'andys version ' + PLANTOS_VERSION;
 }
 
 </script>

@@ -8334,6 +8334,8 @@ function MyPlantsScreen({ openTab, prefill }) {
         setEditUid(uid);
         populateEdit(p); // show immediately with what we have
         setEditStatus({ type: 'loading', message: 'Loading...' });
+        // Scroll to top so the edit form is visible
+        window.scrollTo({ top: 0, behavior: 'smooth' });
         try {
             const full = await getPlant(uid);
             if (full) populateEdit(full);
@@ -8651,6 +8653,14 @@ function MyPlantsScreen({ openTab, prefill }) {
                                 React.createElement("option", { value: "" }, "\u2014 no location \u2014"),
                                 (locations || []).map(loc => React.createElement("option", { key: loc, value: loc }, loc)),
                                 edit.location && !(locations || []).includes(edit.location) && React.createElement("option", { value: edit.location }, edit.location))),
+                        React.createElement("div", { className: "mb-2" },
+                            React.createElement("div", { style: Object.assign({}, pxS, { fontSize: '13px', fontWeight: 800, color: theme.txtS }) }, "Substrate"),
+                            React.createElement("select", { value: isCustomMix(edit.substrate) ? 'Custom soil mix' : (edit.substrate || ''), onChange: function(e) { var v = e.target.value; if (v === 'Custom soil mix' || v === 'Custom PON mix') { setEdit(function(prev) { return Object.assign({}, prev, { substrate: encodeCustomMix([{ ingredient: SOIL_MIX_INGREDIENTS[0], parts: 1 }], false) }); }); } else { setEdit(function(prev) { return Object.assign({}, prev, { substrate: v }); }); } }, className: "w-full border-4 px-2 py-1.5 mt-1", style: Object.assign({}, pxS, { fontSize: '13px', color: theme.txtP, borderColor: theme.cardBorder, background: theme.cardBg }) },
+                                React.createElement("option", { value: "" }, "\u2014 select \u2014"),
+                                PROP_SUBSTRATES.map(function(s) { return React.createElement("option", { key: s, value: s }, s); }),
+                                React.createElement("option", { value: "Soil mix" }, "Soil mix"),
+                                React.createElement("option", { value: "Custom soil mix" }, "\uD83C\uDF31 Custom soil mix...")),
+                            isCustomMix(edit.substrate) && React.createElement(CustomMixBuilder, { value: edit.substrate, onChange: function(enc) { setEdit(function(prev) { return Object.assign({}, prev, { substrate: enc }); }); }, growingMethod: 'substrate', pxS: pxS, theme: theme })),
                         React.createElement("div", { className: "grid grid-cols-2 gap-2 mb-2" },
                             React.createElement("div", null,
                                 React.createElement("div", { style: Object.assign({}, pxS, { fontSize: '13px', fontWeight: 800, color: theme.txtS }) }, "Water every (days)"),
@@ -16041,7 +16051,7 @@ function GasBannerTip() {
             React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', color: '#7A5528', lineHeight: 1.4 }) }, "Share \u2192 Add to Home Screen for a full-screen app experience without the Google banner.")),
         React.createElement("button", { type: "button", onClick: () => setVisible(false), style: Object.assign(Object.assign({}, pxS), { fontSize: '18px', color: '#5A3818', background: 'none', border: 'none', padding: '0 4px', cursor: 'pointer' }) }, "\u2715")));
 }
-const PLANTOS_VERSION = '3.7';
+const PLANTOS_VERSION = '3.8';
 
 function SplashScreen({ onEnter }) {
   const [hover, setHover] = React.useState(false);

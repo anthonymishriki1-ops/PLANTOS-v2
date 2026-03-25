@@ -553,6 +553,70 @@
       border: 2px solid; font-weight: 900;
     }
 
+    /* Sticky header */
+    .sticky-header {
+      position: sticky; top: 0; z-index: 50;
+      padding: 8px 12px;
+      border-bottom: 3px solid;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .header-nav-scroll {
+      display: flex; gap: 6px; overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none; flex: 1; justify-content: center;
+    }
+    .header-nav-scroll::-webkit-scrollbar { display: none; }
+    .header-nav-btn {
+      display: flex; align-items: center; gap: 5px;
+      padding: 6px 12px; border: 2px solid;
+      font-family: var(--font-body);
+      font-weight: 900; font-size: var(--fs-small);
+      cursor: pointer; white-space: nowrap; position: relative;
+      transition: transform 0.08s ease;
+    }
+    .header-nav-btn:active { transform: translateY(1px); }
+    .header-nav-btn .nav-icon { font-size: 16px; line-height: 1; flex-shrink: 0; }
+    .header-nav-btn .nav-badge {
+      padding: 1px 5px; font-family: var(--font-pixel);
+      font-size: 10px; border: 2px solid; font-weight: 900;
+    }
+
+    /* Vertical calendar */
+    .vcal-title {
+      font-family: var(--font-body); font-size: var(--fs-small);
+      font-weight: 900; letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 8px 10px 6px; color: var(--c-soon);
+    }
+    .vcal-day {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 10px; border-top: 1px solid rgba(0,0,0,0.08);
+    }
+    .vcal-day-today { background: rgba(200,168,75,0.12); border-left: 3px solid #C8A84B; }
+    .vcal-day-label { min-width: 50px; text-align: center; }
+    .vcal-expand-btn {
+      flex: 1; display: flex; align-items: center; justify-content: space-between;
+      font-family: var(--font-body); font-size: var(--fs-tiny); font-weight: 700;
+      padding: 4px 10px; cursor: pointer; color: inherit;
+      border: 1px solid rgba(0,0,0,0.1); background: rgba(66,165,245,0.08);
+    }
+    .vcal-expand-btn .chevron { transition: transform 0.2s ease; font-size: 10px; }
+    .vcal-expand-btn.open .chevron { transform: rotate(180deg); }
+    .vcal-plant-list { padding: 2px 10px 6px 60px; }
+    .vcal-plant-item {
+      padding: 2px 0; font-family: var(--font-body);
+      font-size: var(--fs-tiny); font-weight: 700;
+    }
+
+    /* Sidebar buttons */
+    .sidebar-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 14px 16px; border: 3px solid;
+      font-family: var(--font-body); font-weight: 900; font-size: var(--fs-ui);
+      cursor: pointer; width: 100%;
+      transition: transform 0.08s ease, box-shadow 0.08s ease;
+    }
+    .sidebar-btn:active { transform: translateY(2px); box-shadow: none !important; }
+
     .overdue-card {
       border-left: 4px solid var(--c-urgent) !important;
       background: rgba(192, 48, 30, 0.08) !important;
@@ -5466,6 +5530,129 @@ function HomeScreen() {
                 }, "+" + ((upcoming.length + fertUpcoming.length) - cap) + " more \u2014 see all")));
     };
 
+    // -- Vertical Calendar (sidebar) --
+    const VerticalCalendar = () => {
+        var _ecState = React.useState({});
+        var expandedDays = _ecState[0], setExpandedDays = _ecState[1];
+        var _pd = usePlantData();
+        var homeData = _pd.homeData;
+
+        var eventMap = {};
+        function markEvt(list, type) {
+            (list || []).forEach(function(p) {
+                var key = p.due || p.waterDue || p.fertDue || '';
+                if (!key) return;
+                if (!eventMap[key]) eventMap[key] = { water: [], fert: [] };
+                var name = p.nickname || p.primary || p.classification || p.gs || '#' + (p.uid || '?');
+                eventMap[key][type].push(name);
+            });
+        }
+        markEvt(homeData && homeData.dueNow, 'water');
+        markEvt(homeData && homeData.upcoming, 'water');
+        markEvt(homeData && homeData.fertDueNow, 'fert');
+        markEvt(homeData && homeData.fertUpcoming, 'fert');
+
+        var today = new Date();
+        var DOW_SHORT = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+        var MON_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        var CAL_W = '#42A5F5', CAL_F = '#66BB6A', CAL_GOLD = '#C8A84B';
+
+        var weekDays = [];
+        for (var i = 0; i < 7; i++) {
+            var d = new Date(today); d.setDate(today.getDate() + i);
+            var key = d.toISOString().slice(0, 10);
+            weekDays.push({ d: d, key: key, isToday: i === 0 });
+        }
+
+        function toggleDay(key) {
+            setExpandedDays(function(prev) {
+                var next = Object.assign({}, prev);
+                next[key] = !next[key];
+                return next;
+            });
+        }
+
+        return React.createElement('div', null,
+            React.createElement('div', { className: 'vcal-title', style: { color: theme.txtS } },
+                MON_SHORT[today.getMonth()] + ' ' + today.getFullYear() + ' \u2014 This Week'),
+            weekDays.map(function(item) {
+                var d = item.d, key = item.key, isToday = item.isToday;
+                var ev = eventMap[key] || {};
+                var waterList = ev.water || [];
+                var fertList = ev.fert || [];
+                var total = waterList.length + fertList.length;
+                var isOpen = expandedDays[key];
+
+                return React.createElement('div', { key: key },
+                    React.createElement('div', {
+                        className: 'vcal-day' + (isToday ? ' vcal-day-today' : ''),
+                        onClick: function() { if (total > 0) toggleDay(key); },
+                        style: { cursor: total > 0 ? 'pointer' : 'default' }
+                    },
+                        React.createElement('div', { className: 'vcal-day-label' },
+                            React.createElement('div', { style: Object.assign({}, pxS, {
+                                fontSize: '10px', fontWeight: 900,
+                                color: isToday ? CAL_GOLD : theme.txtS,
+                                letterSpacing: '0.04em',
+                            }) }, DOW_SHORT[d.getDay()]),
+                            React.createElement('div', { style: Object.assign({}, pxS, {
+                                fontSize: isToday ? '20px' : '16px', fontWeight: 900,
+                                color: isToday ? CAL_GOLD : theme.txtP,
+                                lineHeight: 1.2,
+                            }) }, String(d.getDate())),
+                            isToday && React.createElement('div', { style: Object.assign({}, pxS, {
+                                fontSize: '8px', color: CAL_GOLD, fontWeight: 900,
+                            }) }, '\u2605 TODAY')
+                        ),
+                        total > 0
+                            ? React.createElement('button', {
+                                type: 'button',
+                                className: 'vcal-expand-btn' + (isOpen ? ' open' : ''),
+                                style: {
+                                    background: 'rgba(66,165,245,0.08)',
+                                    border: '1px solid ' + CAL_W,
+                                    color: CAL_W,
+                                },
+                                onClick: function(e) { e.stopPropagation(); toggleDay(key); }
+                            },
+                                React.createElement('span', null, 'Show Plants (x' + total + ')'),
+                                React.createElement('span', { className: 'chevron' }, '\u25BC')
+                            )
+                            : React.createElement('div', { style: Object.assign({}, pxS, {
+                                fontSize: '11px', color: theme.txtS, opacity: 0.5, flex: 1, textAlign: 'center',
+                            }) }, '\u2014')
+                    ),
+                    isOpen && total > 0 && React.createElement('div', { className: 'vcal-plant-list' },
+                        waterList.map(function(name, i) {
+                            return React.createElement('div', { key: 'w' + i, className: 'vcal-plant-item', style: { color: CAL_W } },
+                                '\uD83D\uDCA7 ' + name);
+                        }),
+                        fertList.map(function(name, i) {
+                            return React.createElement('div', { key: 'f' + i, className: 'vcal-plant-item', style: { color: CAL_F } },
+                                '\uD83C\uDF31 ' + name);
+                        })
+                    )
+                );
+            })
+        );
+    };
+
+    // -- Sidebar Buttons --
+    const SidebarButtons = () => React.createElement('div', { style: { display: 'flex', gap: 8, marginTop: 12 } },
+        React.createElement('button', { type: 'button', onClick: () => navigate('plant-log'),
+            className: 'sidebar-btn hover-lift',
+            style: { borderColor: theme.cardBorder, background: theme.cardBg, color: theme.txtP, boxShadow: '0 3px 0 ' + theme.cardBorder, flex: 1 }
+        },
+            React.createElement('span', { style: { fontSize: 18 } }, '\uD83D\uDCCB'),
+            React.createElement('span', null, 'Activity Log')),
+        React.createElement('button', { type: 'button', onClick: () => navigate('environments'),
+            className: 'sidebar-btn hover-lift',
+            style: { borderColor: theme.cardBorder, background: theme.cardBg, color: theme.txtP, boxShadow: '0 3px 0 ' + theme.cardBorder, flex: 1 }
+        },
+            React.createElement('span', { style: { fontSize: 18 } }, '\uD83D\uDCCD'),
+            React.createElement('span', null, 'Locations'))
+    );
+
     // ΓöÇΓöÇ Navigation Grid (cleaner) ΓöÇΓöÇ
     const NavGrid = () => React.createElement("div", { className: "grid grid-cols-2 gap-2" },
         React.createElement("button", { type: "button", onClick: () => navigate('my-plants'),
@@ -5510,14 +5697,12 @@ function HomeScreen() {
 
     const pad = isSmall ? 'p-3' : isDesktop ? 'p-6' : 'p-4';
     const maxW = isDesktop ? '1200px' : '680px';
-    const Header = () => (React.createElement("div", { className: "flex items-center justify-between mb-3" },
-        React.createElement("div", { className: "flex items-center gap-2" },
-            React.createElement('svg', {
-                width: isSmall ? 140 : isDesktop ? 200 : 170,
-                height: isSmall ? 36 : isDesktop ? 48 : 42,
+    const HeaderLogo = () => React.createElement('svg', {
+                width: isSmall ? 120 : 160,
+                height: isSmall ? 30 : 40,
                 viewBox: '0 0 200 48',
                 xmlns: 'http://www.w3.org/2000/svg',
-                style: { display: 'block', imageRendering: 'pixelated' }
+                style: { display: 'block', imageRendering: 'pixelated', flexShrink: 0 }
             },
                 React.createElement('rect', { x: 0, y: 0, width: 200, height: 48, fill: '#0A1A06', rx: 0 }),
                 React.createElement('rect', { x: 0, y: 0, width: 200, height: 2, fill: '#4A8A28' }),
@@ -5556,9 +5741,44 @@ function HomeScreen() {
                     x: 186, y: 30, width: 6, height: 6, fill: '#6AC840',
                     style: { animation: 'blink-prompt 1.1s step-end infinite' }
                 })
-            ),
-            DEMO_MODE && (React.createElement("div", { className: "px-2 py-1 border-2 border-[#C0392B] badge-pulse", style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', fontWeight: 900, color: 'var(--c-urgent)' }) }, "DEMO"))),
-        React.createElement(ThemePicker, null)));
+            );
+
+    const Header = () => React.createElement("div", {
+        className: "sticky-header",
+        style: { background: '#0A1A06', borderColor: '#2A4010' }
+    },
+        React.createElement(HeaderLogo, null),
+        DEMO_MODE && React.createElement("div", { className: "px-2 py-1 border-2 border-[#C0392B] badge-pulse", style: Object.assign({}, pxS, { fontSize: '11px', fontWeight: 900, color: 'var(--c-urgent)' }) }, "DEMO"),
+        React.createElement("div", { className: "header-nav-scroll" },
+            React.createElement("button", { type: "button", onClick: () => navigate('my-plants'),
+                className: "header-nav-btn hover-lift",
+                style: { borderColor: theme.btnP.border, background: theme.btnP.bg, color: theme.btnP.text, boxShadow: '0 2px 0 ' + theme.btnP.border }
+            },
+                React.createElement("span", { className: "nav-icon" }, "\uD83C\uDF3F"),
+                React.createElement("span", null, "My Plants"),
+                totalCount != null && React.createElement("span", { className: "nav-badge", style: { borderColor: theme.btnP.text, color: theme.btnP.text, opacity: 0.8 } }, totalCount)),
+            React.createElement("button", { type: "button", onClick: () => navigate('watering'),
+                className: "header-nav-btn hover-lift relative",
+                style: { borderColor: theme.btnP.border, background: theme.btnP.bg, color: theme.btnP.text, boxShadow: '0 2px 0 ' + theme.btnP.border }
+            },
+                React.createElement("span", { className: "nav-icon" }, "\uD83D\uDCA7"),
+                React.createElement("span", null, "Log Watering"),
+                dueNow.length > 0 && React.createElement("span", { className: "absolute -top-2 -right-2 border-2 border-white px-1 py-0.5 urgent-pulse", style: Object.assign({ background: 'var(--c-urgent)' }, pxS, { fontSize: '10px', color: '#fff', fontWeight: 900, lineHeight: 1.2 }) }, dueNow.length)),
+            React.createElement("button", { type: "button", onClick: () => navigate('carl'),
+                className: "header-nav-btn hover-lift relative",
+                style: { borderColor: '#2E7A2E', background: '#1A3A1A', color: '#A8E89C', boxShadow: '0 2px 0 #1A5A1A' }
+            },
+                React.createElement("span", { className: "nav-icon" }, "\uD83C\uDF3F"),
+                React.createElement("span", null, "Carl"),
+                React.createElement("span", { style: { position: 'absolute', top: -5, right: -5, background: '#2E7A2E', border: '2px solid #A8E89C', color: '#A8E89C', fontSize: '8px', fontFamily: "'Press Start 2P', cursive", padding: '1px 4px', lineHeight: 1.4 } }, "AI")),
+            React.createElement("button", { type: "button", onClick: () => navigate('add'),
+                className: "header-nav-btn hover-lift",
+                style: { borderColor: theme.btnS.border, background: theme.btnS.bg, color: theme.btnS.text, boxShadow: '0 2px 0 ' + theme.btnS.border }
+            },
+                React.createElement("span", { className: "nav-icon" }, "\u2795"),
+                React.createElement("span", null, "Add Plant"))
+        ),
+        React.createElement(ThemePicker, null));
 
     if (isDesktop) {
         return (React.createElement("div", { className: `flex flex-col ${pad} w-full pb-4 screen-enter`, style: { maxWidth: maxW, margin: '0 auto' } },
@@ -5574,18 +5794,20 @@ function HomeScreen() {
                         React.createElement(UpcomingSection, null))),
                 React.createElement("div", null,
                     React.createElement(PlantCard, null,
-                        React.createElement(NavGrid, null))))));
+                        React.createElement(VerticalCalendar, null)),
+                    React.createElement(SidebarButtons, null)))));
     }
     return (React.createElement("div", { className: `flex flex-col ${pad} w-full pb-4 screen-enter`, style: { maxWidth: maxW, margin: '0 auto' } },
         React.createElement(Header, null),
         React.createElement(HomeGreeting, null),
-        React.createElement("div", { style: { marginTop: 6 } },
-            React.createElement(NavGrid, null)),
         React.createElement(StatsBar, null),
         React.createElement(BirthdayBanner, null),
         React.createElement(HappyBanner, null),
         React.createElement(NeedsAttention, null),
-        React.createElement(UpcomingSection, null)));
+        React.createElement(UpcomingSection, null),
+        React.createElement(PlantCard, null,
+            React.createElement(VerticalCalendar, null)),
+        React.createElement(SidebarButtons, null)));
 }
 function CustomMixBuilder({ value, onChange, growingMethod, pxS, theme }) {
     var isSemiHydro = growingMethod === 'semihydro';
@@ -15088,184 +15310,6 @@ function HomeGreeting() {
                     totalWater > 0 && totalFert > 0 ? '\n' : '',
                     totalFert > 0 ? '\uD83C\uDF31 ' + totalFert : ''
                 )
-        ),
-
-        React.createElement('div', { style: {
-            borderTop: '2px solid ' + theme.cardBorder,
-            padding: '6px 8px 8px',
-        }},
-            React.createElement('div', { style: Object.assign({}, pxS, {
-                fontSize: '10px', fontWeight: 900, color: theme.txtS,
-                letterSpacing: '0.1em', marginBottom: 5,
-                textTransform: 'uppercase',
-            }) },
-                MON_SHORT[today.getMonth()] + ' ' + today.getFullYear() + '  \u2014  This week'
-            ),
-
-            React.createElement('div', { style: { display: 'flex', gap: 4, overflow: 'visible', position: 'relative' } },
-                weekDays.map(function(item) {
-                    var d = item.d, key = item.key, isToday = item.isToday;
-                    var ev = eventMap[key] || {};
-                    var waterList = ev.water || [];
-                    var fertList  = ev.fert  || [];
-                    var hasW = waterList.length > 0;
-                    var hasF = fertList.length  > 0;
-                    var hasBoth = hasW && hasF;
-                    var hasAny = hasW || hasF;
-
-                    var cellBg = isToday
-                        ? 'rgba(200,168,75,0.18)'
-                        : hasBoth ? 'rgba(66,165,245,0.10)'
-                        : hasW    ? 'rgba(66,165,245,0.08)'
-                        : hasF    ? 'rgba(102,187,106,0.08)'
-                        : 'rgba(255,255,255,0.02)';
-
-                    var borderTop = isToday ? '3px solid ' + CAL_GOLD
-                        : hasW ? '3px solid ' + CAL_W
-                        : hasF ? '3px solid ' + CAL_F
-                        : '3px solid rgba(255,255,255,0.06)';
-
-                    return React.createElement('div', { key: key, style: {
-                        flex: '1 1 0', minWidth: 0,
-                        background: cellBg,
-                        borderTop: borderTop,
-                        padding: isToday ? '6px 4px 7px' : '5px 4px 6px',
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                        boxShadow: isToday ? '0 0 12px rgba(200,168,75,0.2)' : 'none',
-                        minWidth: 0,
-                    }},
-                        React.createElement('div', { style: Object.assign({}, pxS, {
-                            fontSize: '9px', fontWeight: 900,
-                            color: isToday ? CAL_GOLD : '#7A6050',
-                            letterSpacing: '0.04em', lineHeight: 1,
-                        }) }, DOW_SHORT[d.getDay()]),
-
-                        React.createElement('div', { style: Object.assign({}, pxS, {
-                            fontSize: isToday ? '18px' : '14px',
-                            fontWeight: 900,
-                            color: isToday ? CAL_GOLD
-                                : hasAny ? '#D0C0A0'
-                                : '#6A5545',
-                            lineHeight: 1,
-                        }) }, String(d.getDate())),
-
-                        React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 2, width: '100%', alignItems: 'center' } },
-                            hasW && React.createElement('div', { style: { position: 'relative', width: '100%' } },
-                                React.createElement('div', {
-                                    style: {
-                                        display: 'flex', alignItems: 'center', gap: 2,
-                                        background: 'rgba(66,165,245,0.2)',
-                                        border: '1px solid ' + CAL_W,
-                                        padding: '1px 4px',
-                                        width: '100%', justifyContent: 'center',
-                                        boxSizing: 'border-box',
-                                        cursor: 'pointer',
-                                    },
-                                    onMouseEnter: function() { setCalTooltip({ key: key, type: 'water' }); },
-                                    onMouseLeave: function() { setCalTooltip(null); },
-                                    onClick: function(e) { e.stopPropagation(); setCalTooltip(function(prev) { return (prev && prev.key === key && prev.type === 'water') ? null : { key: key, type: 'water' }; }); },
-                                },
-                                    React.createElement('span', { style: { fontSize: '8px', lineHeight: 1 } }, '\uD83D\uDCA7'),
-                                    React.createElement('span', { style: Object.assign({}, pxS, { fontSize: '9px', fontWeight: 900, color: CAL_W }) },
-                                        waterList.length > 1 ? 'x' + waterList.length : '')
-                                ),
-                                calTooltip && calTooltip.key === key && calTooltip.type === 'water' && React.createElement('div', {
-                                    style: {
-                                        position: 'absolute', bottom: '100%', left: '50%',
-                                        transform: 'translateX(-50%)',
-                                        marginBottom: 4, zIndex: 999,
-                                        background: '#0D1F0D', border: '2px solid ' + CAL_W,
-                                        boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-                                        padding: '6px 8px', minWidth: 120, maxWidth: 200,
-                                        pointerEvents: 'none',
-                                    }
-                                },
-                                    React.createElement('div', { style: Object.assign({}, pxS, { fontSize: '10px', color: CAL_W, fontWeight: 900, marginBottom: 4, whiteSpace: 'nowrap' }) },
-                                        '\uD83D\uDCA7 Water ' + DOW_FULL[new Date(key + 'T12:00:00').getDay()]),
-                                    waterList.map(function(name, i) {
-                                        return React.createElement('div', { key: i, style: Object.assign({}, pxS, { fontSize: '11px', color: '#C8E8C0', lineHeight: 1.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 180 }) },
-                                            '• ' + name);
-                                    })
-                                )
-                            ),
-                            hasF && React.createElement('div', { style: { position: 'relative', width: '100%' } },
-                                React.createElement('div', {
-                                    style: {
-                                        display: 'flex', alignItems: 'center', gap: 2,
-                                        background: 'rgba(102,187,106,0.2)',
-                                        border: '1px solid ' + CAL_F,
-                                        padding: '1px 4px',
-                                        width: '100%', justifyContent: 'center',
-                                        boxSizing: 'border-box',
-                                        cursor: 'pointer',
-                                    },
-                                    onMouseEnter: function() { setCalTooltip({ key: key, type: 'fert' }); },
-                                    onMouseLeave: function() { setCalTooltip(null); },
-                                    onClick: function(e) { e.stopPropagation(); setCalTooltip(function(prev) { return (prev && prev.key === key && prev.type === 'fert') ? null : { key: key, type: 'fert' }; }); },
-                                },
-                                    React.createElement('span', { style: { fontSize: '8px', lineHeight: 1 } }, '\uD83C\uDF31'),
-                                    React.createElement('span', { style: Object.assign({}, pxS, { fontSize: '9px', fontWeight: 900, color: CAL_F }) },
-                                        fertList.length > 1 ? 'x' + fertList.length : '')
-                                ),
-                                calTooltip && calTooltip.key === key && calTooltip.type === 'fert' && React.createElement('div', {
-                                    style: {
-                                        position: 'absolute', bottom: '100%', left: '50%',
-                                        transform: 'translateX(-50%)',
-                                        marginBottom: 4, zIndex: 999,
-                                        background: '#0D1F0D', border: '2px solid ' + CAL_F,
-                                        boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
-                                        padding: '6px 8px', minWidth: 120, maxWidth: 200,
-                                        pointerEvents: 'none',
-                                    }
-                                },
-                                    React.createElement('div', { style: Object.assign({}, pxS, { fontSize: '10px', color: CAL_F, fontWeight: 900, marginBottom: 4, whiteSpace: 'nowrap' }) },
-                                        '\uD83C\uDF31 Fertilize ' + DOW_FULL[new Date(key + 'T12:00:00').getDay()]),
-                                    fertList.map(function(name, i) {
-                                        return React.createElement('div', { key: i, style: Object.assign({}, pxS, { fontSize: '11px', color: '#C8E8C0', lineHeight: 1.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 180 }) },
-                                            '• ' + name);
-                                    })
-                                )
-                            )
-                        ),
-
-                        isToday && React.createElement('div', { style: Object.assign({}, pxS, {
-                            fontSize: '8px', color: CAL_GOLD, fontWeight: 900, marginTop: 1
-                        }) }, '\u2605 TODAY')
-                    );
-                })
-            ),
-
-            (function() {
-                var items = [];
-                weekDays.slice(0, 3).forEach(function(day) {
-                    var ev = eventMap[day.key] || {};
-                    var label = day.isToday ? 'Today'
-                        : day.dayNum === 1 ? 'Tomorrow'
-                        : DOW_FULL[day.d.getDay()];
-                    (ev.water || []).slice(0, 2).forEach(function(name) {
-                        items.push({ label: label, name: name, type: 'water', key: day.key + name });
-                    });
-                    (ev.fert || []).slice(0, 1).forEach(function(name) {
-                        items.push({ label: label, name: name, type: 'fert', key: day.key + name + 'f' });
-                    });
-                });
-                if (items.length === 0) return null;
-                return React.createElement('div', { style: { marginTop: 7, display: 'flex', flexDirection: 'column', gap: 3 } },
-                    items.slice(0, 4).map(function(item) {
-                        var isW = item.type === 'water';
-                        return React.createElement('div', { key: item.key, style: {
-                            display: 'flex', alignItems: 'center', gap: 6,
-                            padding: '3px 7px',
-                            background: isW ? 'rgba(66,165,245,0.08)' : 'rgba(102,187,106,0.08)',
-                            borderLeft: '3px solid ' + (isW ? CAL_W : CAL_F),
-                        }},
-                            React.createElement('span', { style: { fontSize: '11px', flexShrink: 0 } }, isW ? '\uD83D\uDCA7' : '\uD83C\uDF31'),
-                            React.createElement('span', { style: Object.assign({}, pxS, { fontSize: '11px', fontWeight: 900, color: isW ? '#8AADCC' : '#A5D6A7', flexShrink: 0 }) }, item.label),
-                            React.createElement('span', { style: Object.assign({}, pxS, { fontSize: '11px', color: '#B0A080', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }) }, item.name)
-                        );
-                    })
-                );
-            }())
         )
     );
 }
@@ -15989,7 +16033,7 @@ function GasBannerTip() {
             React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', color: '#7A5528', lineHeight: 1.4 }) }, "Share \u2192 Add to Home Screen for a full-screen app experience without the Google banner.")),
         React.createElement("button", { type: "button", onClick: () => setVisible(false), style: Object.assign(Object.assign({}, pxS), { fontSize: '18px', color: '#5A3818', background: 'none', border: 'none', padding: '0 4px', cursor: 'pointer' }) }, "\u2715")));
 }
-const PLANTOS_VERSION = '1.3';
+const PLANTOS_VERSION = '1.4';
 
 function SplashScreen({ onEnter }) {
   const [hover, setHover] = React.useState(false);

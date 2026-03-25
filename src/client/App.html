@@ -276,6 +276,10 @@
     }
 
     @media (max-width: 768px) { button, a, [role="button"] { min-height: 44px; } }
+    @media (max-width: 500px) {
+      .vcal-plant-list { padding-left: 40px !important; }
+      .vcal-day-label { min-width: 40px !important; }
+    }
 
     ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); border-left: 2px solid rgba(0,0,0,0.4); }
@@ -5719,7 +5723,10 @@ function HomeScreen() {
         style: { width: '30%', maxWidth: 280, height: 'auto', imageRendering: 'pixelated', cursor: 'pointer', flexShrink: 0 }
     });
 
-    const Header = () => React.createElement("div", {
+    const { isMobile: _headerIsMobile } = useScreenSize();
+    const Header = () => {
+        if (_headerIsMobile) return null;
+        return React.createElement("div", {
         className: "sticky-header",
         style: { background: '#C8D8A8', borderColor: '#8AA868' }
     },
@@ -5755,6 +5762,7 @@ function HomeScreen() {
                 React.createElement("span", null, "Add Plant"))
         ),
         React.createElement(ThemePicker, null));
+    };
 
     if (isDesktop) {
         return (React.createElement("div", { className: `flex flex-col ${pad} w-full pb-4 screen-enter`, style: { maxWidth: maxW, margin: '0 auto' } },
@@ -15524,50 +15532,43 @@ function DevScreen() {
 
 
 function BottomNav({ current, navigate, goBack }) {
-    const { isDesktop } = useScreenSize();
+    const { isMobile } = useScreenSize();
     const theme = useTheme();
-    if (isDesktop) return null;
+    if (!isMobile) return null;
     const tabs = [
-        { id: 'home',      icon: '🏠', label: 'Home'     },
-        { id: 'my-plants', icon: '🌿', label: 'Plants'   },
-        { id: 'watering',  icon: '💧', label: 'Water'    },
-        { id: 'add',       icon: 'Γ₧ò', label: 'Add'      },
-        { id: 'settings',  icon: 'ΓÜÖ∩╕Å', label: 'Settings' },
+        { id: 'home',      icon: '🏠' },
+        { id: 'my-plants', icon: '🌿' },
+        { id: 'watering',  icon: '💧' },
+        { id: 'carl',      icon: '👴' },
+        { id: 'add',       icon: '➕' },
     ];
-    const isTab = tabs.some(t => t.id === current);
-    const navStyle = {
-        background: `linear-gradient(180deg, ${theme.navBg} 0%, #0A0800 100%)`,
-        borderTop: `4px solid ${theme.navBorder}`,
-        boxShadow: `inset 0 3px 0 rgba(200,168,75,0.15), 0 -2px 0 rgba(0,0,0,0.5)`,
-        minHeight: 56,
-    };
-    return React.createElement("div", { className: "shrink-0 flex items-stretch pb-safe", style: navStyle },
-        !isTab && React.createElement("button", {
-            type: "button", onClick: goBack,
-            className: "flex flex-col items-center justify-center px-4 border-r-2 active:opacity-70",
-            style: { ...pxS, color: theme.navActive, fontSize: '13px', fontWeight: 900, minWidth: 60, borderColor: theme.navBorder }
-        },
-            React.createElement("span", { style: { fontSize: '20px', lineHeight: 1 } }, "ΓåÉ"),
-            React.createElement("span", { style: { ...pxS, fontSize: '11px', marginTop: 2, color: theme.navInactive, fontWeight: 900 } }, "BACK")
-        ),
-        tabs.map(t => {
-            const active = current === t.id;
+    return React.createElement("div", {
+        style: {
+            position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
+            display: 'flex', alignItems: 'center',
+            background: 'linear-gradient(180deg, ' + (theme.navBg || '#0C1808') + ' 0%, #0A0800 100%)',
+            borderTop: '3px solid ' + (theme.navBorder || '#182808'),
+            boxShadow: 'inset 0 2px 0 rgba(200,168,75,0.1), 0 -2px 0 rgba(0,0,0,0.5)',
+            paddingBottom: 'max(4px, env(safe-area-inset-bottom))',
+            minHeight: 52,
+        }
+    },
+        tabs.map(function(t) {
+            var active = current === t.id;
             return React.createElement("button", {
-                key: t.id, type: "button", onClick: () => navigate(t.id),
-                className: "flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors active:opacity-70",
+                key: t.id, type: "button", onClick: function() { navigate(t.id); },
                 style: {
-                    background: active ? 'rgba(200,168,75,0.12)' : 'transparent',
-                    borderTop: active ? `3px solid ${theme.navActive}` : '3px solid transparent',
-                    paddingTop: 2,
+                    flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: active ? 'rgba(200,168,75,0.15)' : 'transparent',
+                    borderTop: active ? '3px solid ' + (theme.navActive || '#C8A84B') : '3px solid transparent',
+                    border: 'none', borderTopStyle: 'solid', borderTopWidth: 3,
+                    borderTopColor: active ? (theme.navActive || '#C8A84B') : 'transparent',
+                    cursor: 'pointer', padding: '8px 0', minHeight: 48,
+                    fontSize: '26px', lineHeight: 1,
+                    opacity: active ? 1 : 0.5,
+                    transition: 'opacity 0.15s ease',
                 }
-            },
-                React.createElement("span", { style: { fontSize: '22px', lineHeight: 1, opacity: active ? 1 : 0.5 } }, t.icon),
-                React.createElement("span", { style: {
-                    ...pxS, fontSize: '11px', fontWeight: 900, letterSpacing: '0.04em',
-                    color: active ? theme.navActive : theme.navInactive,
-                    marginTop: 1,
-                } }, t.label.toUpperCase())
-            );
+            }, t.icon);
         })
     );
 }
@@ -16032,7 +16033,8 @@ function AppContent() {
             React.createElement("div", { style: { flex: 1 } }),
             React.createElement("button", { onClick: () => window.location.reload(), style: { fontFamily: "'Press Start 2P',monospace", fontSize: 11, padding: '7px 10px', background: 'transparent', border: '2px solid #3A5A18', color: '#8AC868', cursor: 'pointer' } }, "↻")
         )),
-        React.createElement("div", { className: "scroll-y", style: { flex: 1, minHeight: 0, position: 'relative', zIndex: 10, overflowY: 'auto', paddingTop: 0, background: currentScreen !== 'home' ? '#1A2A10' : undefined } }, render())));
+        React.createElement("div", { className: "scroll-y", style: { flex: 1, minHeight: 0, position: 'relative', zIndex: 10, overflowY: 'auto', paddingTop: 0, paddingBottom: !isDesktop ? 60 : 0 } }, render()),
+        React.createElement(BottomNav, { current: currentScreen, navigate: navigate, goBack: goBack })));
 }
 
 function GasBannerTip() {
@@ -16052,7 +16054,7 @@ function GasBannerTip() {
             React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', color: '#7A5528', lineHeight: 1.4 }) }, "Share \u2192 Add to Home Screen for a full-screen app experience without the Google banner.")),
         React.createElement("button", { type: "button", onClick: () => setVisible(false), style: Object.assign(Object.assign({}, pxS), { fontSize: '18px', color: '#5A3818', background: 'none', border: 'none', padding: '0 4px', cursor: 'pointer' }) }, "\u2715")));
 }
-const PLANTOS_VERSION = '4.0';
+const PLANTOS_VERSION = '4.1';
 
 function SplashScreen({ onEnter }) {
   const [hover, setHover] = React.useState(false);

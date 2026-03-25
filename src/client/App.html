@@ -5710,44 +5710,17 @@ function HomeScreen() {
 
     const pad = isSmall ? 'p-3' : isDesktop ? 'p-6' : 'p-4';
     const maxW = isDesktop ? '1200px' : '680px';
-    const PixelPlantIcon = ({ size }) => React.createElement('svg', {
-        width: size, height: size, viewBox: '0 0 32 32',
-        style: { display: 'block', imageRendering: 'pixelated' }
-    },
-        // Pot
-        React.createElement('rect', { x: 10, y: 20, width: 12, height: 2, fill: '#C87A48' }),
-        React.createElement('rect', { x: 11, y: 22, width: 10, height: 6, fill: '#A0522D' }),
-        React.createElement('rect', { x: 12, y: 28, width: 8, height: 2, fill: '#8B4513' }),
-        React.createElement('rect', { x: 10, y: 20, width: 12, height: 1, fill: '#D4956B' }),
-        // Soil
-        React.createElement('rect', { x: 12, y: 20, width: 8, height: 2, fill: '#5A3A1A' }),
-        // Stem
-        React.createElement('rect', { x: 15, y: 12, width: 2, height: 8, fill: '#3A7A18' }),
-        // Leaves
-        React.createElement('rect', { x: 11, y: 10, width: 4, height: 2, fill: '#5AAA30' }),
-        React.createElement('rect', { x: 9, y: 8, width: 4, height: 2, fill: '#6AC840' }),
-        React.createElement('rect', { x: 13, y: 6, width: 6, height: 2, fill: '#6AC840' }),
-        React.createElement('rect', { x: 17, y: 8, width: 4, height: 2, fill: '#5AAA30' }),
-        React.createElement('rect', { x: 19, y: 10, width: 4, height: 2, fill: '#4A9828' }),
-        React.createElement('rect', { x: 15, y: 4, width: 4, height: 2, fill: '#8AE858' }),
-        React.createElement('rect', { x: 11, y: 6, width: 2, height: 2, fill: '#4A9828' }),
-        React.createElement('rect', { x: 21, y: 12, width: 2, height: 2, fill: '#4A9828' }),
-        // Leaf highlights
-        React.createElement('rect', { x: 14, y: 5, width: 2, height: 1, fill: '#A8F870' }),
-        React.createElement('rect', { x: 10, y: 9, width: 2, height: 1, fill: '#8AE858' }),
-    );
+    var LOGO_PNG = 'data:image/png;base64,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';
 
     const HeaderLogo = () => React.createElement('div', {
-        style: { display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, cursor: 'pointer' },
+        style: { display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0, cursor: 'pointer' },
         onClick: () => navigate('home')
     },
-        React.createElement(PixelPlantIcon, { size: isSmall ? 32 : 40 }),
-        React.createElement('span', { style: {
-            fontFamily: "'Press Start 2P', cursive",
-            fontSize: isSmall ? 14 : 18,
-            color: '#2D5016',
-            letterSpacing: 1,
-        } }, 'PlantOS')
+        React.createElement('img', {
+            src: LOGO_PNG,
+            alt: 'PlantOS',
+            style: { height: isSmall ? 36 : 48, width: 'auto', imageRendering: 'pixelated' }
+        })
     );
 
     const Header = () => React.createElement("div", {
@@ -16046,7 +16019,7 @@ function GasBannerTip() {
             React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', color: '#7A5528', lineHeight: 1.4 }) }, "Share \u2192 Add to Home Screen for a full-screen app experience without the Google banner.")),
         React.createElement("button", { type: "button", onClick: () => setVisible(false), style: Object.assign(Object.assign({}, pxS), { fontSize: '18px', color: '#5A3818', background: 'none', border: 'none', padding: '0 4px', cursor: 'pointer' }) }, "\u2715")));
 }
-const PLANTOS_VERSION = '2.2';
+const PLANTOS_VERSION = '2.3';
 
 function SplashScreen({ onEnter }) {
   const [hover, setHover] = React.useState(false);

@@ -5137,8 +5137,8 @@ function PlantDataProvider({ children }) {
         const pool = DEMO_MODE ? (demoPlants || []) : (allPlantsCache || []);
         if (pool.length > 0) {
             const out = pool.filter(p => {
-                const blob = [p.uid, p.nickname, p.primary, p.genus, p.species, p.taxon, p.classification, p.location, p.substrate, p.medium, p.gs].join(' ').toLowerCase();
-                return blob.includes(qq);
+                const nameBlob = [p.nickname, p.primary, p.genus, p.species, p.taxon, p.gs].join(' ').toLowerCase();
+                return nameBlob.includes(qq);
             });
             return Promise.resolve(out.slice(0, max));
         }
@@ -8303,11 +8303,7 @@ function MyPlantsScreen({ openTab, prefill }) {
         if (!q)
             return plants;
         return (plants || []).filter(p => {
-            const _gs = String(p.gs || '').trim();
-            const _gsGenus = _gs.split(' ')[0] || '';
-            const _cls = String(p.classification || '').trim();
-            const _clsGenus = _cls.includes(' ') ? _cls.split(' ')[0] : '';
-            const hay = [p._title, p._tax, p._line2, p.uid, p.genus, p.species, p.taxon, p.classification, _gsGenus, _clsGenus].map(x => String(x || '')).join(' • ').toLowerCase();
+            const hay = [p._title, p._tax, p.genus, p.species, p.taxon, p.nickname, p.primary, p.gs, p.cultivar].map(x => String(x || '')).join(' ').toLowerCase();
             return hay.includes(q);
         });
     }, [plantFilter, plants]);
@@ -16045,7 +16041,7 @@ function GasBannerTip() {
             React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', color: '#7A5528', lineHeight: 1.4 }) }, "Share \u2192 Add to Home Screen for a full-screen app experience without the Google banner.")),
         React.createElement("button", { type: "button", onClick: () => setVisible(false), style: Object.assign(Object.assign({}, pxS), { fontSize: '18px', color: '#5A3818', background: 'none', border: 'none', padding: '0 4px', cursor: 'pointer' }) }, "\u2715")));
 }
-const PLANTOS_VERSION = '3.6';
+const PLANTOS_VERSION = '3.7';
 
 function SplashScreen({ onEnter }) {
   const [hover, setHover] = React.useState(false);

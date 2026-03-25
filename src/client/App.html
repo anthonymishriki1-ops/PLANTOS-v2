@@ -6835,7 +6835,7 @@ function TaxonAutocomplete({ value, onChange, onSelectGenus, placeholder, theme,
         onMouseLeave: e => e.currentTarget.style.background = i % 2 === 0 ? theme.cardBg : theme.rowBg,
       },
         React.createElement('div', { style: Object.assign({ fontSize: '13px', fontWeight: 900, color: theme.txtP }, pxS) },
-          r.isCorrected ? 'Γ£Å∩╕Å ' : '', r.genus
+          r.isCorrected ? '\u270F\uFE0F ' : '', r.genus
         ),
         React.createElement('div', { style: Object.assign({ fontSize: '13px', color: theme.txtS, marginTop: 1 }, pxS) },
           commonLine,
@@ -10328,7 +10328,7 @@ function PropsSection({ locations, prefill }) {
                                         else { setEditPropId(prop.propId); setEditPropForm({ genus: prop.genus || '', species: prop.species || '', type: prop.type || prop.propType || '', substrate: prop.substrate || '', notes: prop.notes || '' }); }
                                     },
                                     style: Object.assign(Object.assign({}, pxS), { fontSize: '12px', fontWeight: 900, padding: '3px 10px', border: `2px solid ${isEditing ? '#aaa' : theme.btnP.border}`, background: isEditing ? 'transparent' : theme.btnP.bg, color: isEditing ? theme.txtS : theme.btnP.text, cursor: 'pointer' })
-                                }, isEditing ? 'Γ£ò Cancel' : 'Γ£Å∩╕Å Edit')),
+                                }, isEditing ? 'Γ£ò Cancel' : '\u270F\uFE0F Edit')),
                             /* display mode */
                             !isEditing && React.createElement("div", { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0', padding: '0' } },
                                 [
@@ -10486,7 +10486,7 @@ function PropsSection({ locations, prefill }) {
                     React.createElement("div", { style: { maxHeight: 200, overflowY: 'auto' } },
                         (timeline || []).length === 0 && React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtS }) }, "No entries yet."),
                         (timeline || []).map((entry, i) => {
-                            const icons = { CREATED: '🌱', STATUS: '📈', NOTE: '≡ƒô¥', PHOTO: '📸' };
+                            const icons = { CREATED: '🌱', STATUS: '📈', NOTE: '\uD83D\uDCDD', PHOTO: '📸' };
                             return (React.createElement("div", { key: i, style: { display: 'flex', gap: 8, padding: '4px 0', borderBottom: i < timeline.length - 1 ? `1px solid ${theme.rowBorder}` : 'none' } },
                                 React.createElement("span", { style: { fontSize: 12, flexShrink: 0 } }, icons[entry.action] || '•'),
                                 React.createElement("div", { style: { flex: 1, minWidth: 0 } },
@@ -11718,7 +11718,7 @@ return (React.createElement("div", { className: `flex flex-col ${isSmall ? 'p-3'
                                 border: `3px solid #2C5018`, background: '#3A6B28', color: '#E8FFD0',
                                 boxShadow: '0 3px 0 #1A3008',
                             })
-                        }, '≡ƒô¥ Save Note'),
+                        }, '\uD83D\uDCDD Save Note'),
                         React.createElement("div", { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 } },
                             React.createElement("button", {
                                 type: "button",
@@ -11748,7 +11748,7 @@ return (React.createElement("div", { className: `flex flex-col ${isSmall ? 'p-3'
                                     display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
                                 }
                             },
-                                React.createElement('span', { style: { fontSize: '18px', lineHeight: 1, fontFamily: "'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif" } }, 'Γ£Å∩╕Å'),
+                                React.createElement('span', { style: { fontSize: '18px', lineHeight: 1, fontFamily: "'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif" } }, '\u270F\uFE0F'),
                                 'EDIT'
                             )
                         )
@@ -15722,9 +15722,9 @@ function DiaryScreen({ uid, name }) {
     const [noteText, setNoteText] = useState('');
     const [noteStatus, setNoteStatus] = useState(null);
     const [filter, setFilter] = useState('ALL');
-    const ICONS = { WATER: '💧', FERTILIZE: '🌾', REPOT: '🪴', NOTE: '≡ƒô¥', UPDATE: 'Γ£Å∩╕Å', CREATE: '🌱', REPAIR: '🔧', PHOTO: '📸', DECEASED: '💀', REHOMED: '🏠', WATERED: '💧', FERTILIZED: '🌾', STATUS: '📋', GRADUATED: '🎓', BATCH: '🪴' };
-    const FILTERS = ['ALL', '💧 WATER', '🌾 FERT', '🪴 REPOT', '≡ƒô¥ NOTE', '🌱 CREATE'];
-    const FILTER_MAP = { 'ALL': null, '💧 WATER': 'WATERED', '🌾 FERT': 'FERTILIZED', '🪴 REPOT': 'REPOT', '≡ƒô¥ NOTE': 'NOTE', '🌱 CREATE': 'CREATE' };
+    const ICONS = { WATER: '💧', FERTILIZE: '🌾', REPOT: '🪴', NOTE: '\uD83D\uDCDD', UPDATE: '\u270F\uFE0F', CREATE: '🌱', REPAIR: '🔧', PHOTO: '📸', DECEASED: '💀', REHOMED: '🏠', WATERED: '💧', FERTILIZED: '🌾', STATUS: '📋', GRADUATED: '🎓', BATCH: '🪴' };
+    const FILTERS = ['ALL', '💧 WATER', '🌾 FERT', '🪴 REPOT', '\uD83D\uDCDD NOTE', '🌱 CREATE'];
+    const FILTER_MAP = { 'ALL': null, '💧 WATER': 'WATERED', '🌾 FERT': 'FERTILIZED', '🪴 REPOT': 'REPOT', '\uD83D\uDCDD NOTE': 'NOTE', '🌱 CREATE': 'CREATE' };
     useEffect(() => {
         if (!uid) {
             setLoading(false);
@@ -16019,7 +16019,7 @@ function GasBannerTip() {
             React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', color: '#7A5528', lineHeight: 1.4 }) }, "Share \u2192 Add to Home Screen for a full-screen app experience without the Google banner.")),
         React.createElement("button", { type: "button", onClick: () => setVisible(false), style: Object.assign(Object.assign({}, pxS), { fontSize: '18px', color: '#5A3818', background: 'none', border: 'none', padding: '0 4px', cursor: 'pointer' }) }, "\u2715")));
 }
-const PLANTOS_VERSION = '1.9';
+const PLANTOS_VERSION = '2.0';
 
 function SplashScreen({ onEnter }) {
   const [hover, setHover] = React.useState(false);

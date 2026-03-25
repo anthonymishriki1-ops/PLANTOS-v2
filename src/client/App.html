@@ -6254,6 +6254,12 @@ function WateringScreen() {
         return locOk && presetOk && freeOk;
     }
     const filtersActive = !!(locFilter || subPreset || String(subContains || '').trim());
+    // Build uid->plant lookup from allPlantsCache so due-list plants (which lack substrate) can be enriched
+    const cacheByUid = useMemo(() => {
+        const m = {};
+        (allPlantsCache || []).forEach(function(p) { if (p && p.uid) m[String(p.uid)] = p; });
+        return m;
+    }, [allPlantsCache]);
     // Filter helper applied across all three buckets
     const nowList = useMemo(() => {
         if (!filtersActive) return nowListRaw;
@@ -6261,18 +6267,20 @@ function WateringScreen() {
             const uid = String(p && p.uid ? p.uid : '').trim();
             if (!uid) return false;
             const meta = metaByUid[uid];
-            return matchesSubFilters(meta, p);
+            const fullPlant = cacheByUid[uid] || p;
+            return matchesSubFilters(meta, fullPlant);
         });
-    }, [filtersActive, nowListRaw, metaByUid, locFilter, subPreset]);
+    }, [filtersActive, nowListRaw, metaByUid, locFilter, subPreset, cacheByUid]);
     const upcomingList = useMemo(() => {
         if (!filtersActive) return upcomingListRaw;
         return (upcomingListRaw || []).filter(p => {
             const uid = String(p && p.uid ? p.uid : '').trim();
             if (!uid) return false;
             const meta = metaByUid[uid];
-            return matchesSubFilters(meta, p);
+            const fullPlant = cacheByUid[uid] || p;
+            return matchesSubFilters(meta, fullPlant);
         });
-    }, [filtersActive, upcomingListRaw, metaByUid, locFilter, subPreset]);
+    }, [filtersActive, upcomingListRaw, metaByUid, locFilter, subPreset, cacheByUid]);
 
     // All plants not in due/upcoming — shown as a third "on track" section
     const dueSet = useMemo(() => {
@@ -16037,7 +16045,7 @@ function GasBannerTip() {
             React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', color: '#7A5528', lineHeight: 1.4 }) }, "Share \u2192 Add to Home Screen for a full-screen app experience without the Google banner.")),
         React.createElement("button", { type: "button", onClick: () => setVisible(false), style: Object.assign(Object.assign({}, pxS), { fontSize: '18px', color: '#5A3818', background: 'none', border: 'none', padding: '0 4px', cursor: 'pointer' }) }, "\u2715")));
 }
-const PLANTOS_VERSION = '3.5';
+const PLANTOS_VERSION = '3.6';
 
 function SplashScreen({ onEnter }) {
   const [hover, setHover] = React.useState(false);

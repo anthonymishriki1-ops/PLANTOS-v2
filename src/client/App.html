@@ -10888,6 +10888,7 @@ function PlantScreen({ uid }) {
     const [editHybridNote, setEditHybridNote] = useState('');
     const [editInfraRank, setEditInfraRank] = useState('');
     const [editInfraEpithet, setEditInfraEpithet] = useState('');
+    const [editNickname, setEditNickname] = useState('');
     const [logNotes, setLogNotes] = useState('');
     const [logWater, setLogWater] = useState(false);
     const [logFert, setLogFert] = useState(false);
@@ -11152,6 +11153,7 @@ function PlantScreen({ uid }) {
         setEditHybridNote(p.hybridNote || p.hybridType || '');
         setEditInfraRank(p.infraRank || '');
         setEditInfraEpithet(p.infraEpithet || '');
+        setEditNickname(p.nickname || '');
         setAutofillStatus(null);
         setAutofillPreview(null);
         setEditOpen(true);
@@ -11282,9 +11284,13 @@ function PlantScreen({ uid }) {
                 birthday: editBirthday, potMaterial: editPotMaterial,
                 cultivar: editCultivar, hybridNote: editHybridNote, potShape: editPotShape,
                 infraRank: editInfraRank, infraEpithet: editInfraEpithet,
+                nickname: editNickname,
                 recomputeDue: true
             };
             await updatePlant(plant.uid, editPatch);
+            if (editNickname !== (plant.nickname || '')) {
+                await setNickname(plant.uid, editNickname);
+            }
             // Expose aliases so UI reads correctly after optimistic update
             var editPatchUI = Object.assign({}, editPatch, {
                 everyDays: editPatch.waterEveryDays,
@@ -11500,8 +11506,7 @@ return (React.createElement("div", { className: `flex flex-col ${isSmall ? 'p-3'
                         ),
                         React.createElement("div", { className: "flex gap-2 mb-2 flex-wrap" },
                             React.createElement(PlantButton, { block: false, onClick: openPhotoPicker, className: "px-3 py-1", variant: "secondary" }, "\uD83D\uDCF8 Photo"),
-                            React.createElement(PlantButton, { block: false, variant: "ghost", className: "px-3 py-1", onClick: function() { navigate('gallery', { uid: plant.uid, name: plant.nickname || plant.genus || 'Gallery' }); } }, "\uD83D\uDDBC\uFE0F Gallery"),
-                            React.createElement(PlantButton, { block: false, variant: "ghost", className: "px-3 py-1", onClick: () => { setNickOpen(v => !v); setNickVal(plant.nickname || ''); } }, plant.nickname ? 'Γ£Å∩╕Å Nickname' : 'Γ£Å∩╕Å Add Nickname')),
+                            React.createElement(PlantButton, { block: false, variant: "ghost", className: "px-3 py-1", onClick: function() { navigate('gallery', { uid: plant.uid, name: plant.nickname || plant.genus || 'Gallery' }); } }, "\uD83D\uDDBC\uFE0F Gallery")),
                         React.createElement(WarningBadge, { plant: plant }),
                         nickOpen && (React.createElement("div", { className: "flex gap-2 mb-2" },
                             React.createElement("input", { value: nickVal, onChange: e => setNickVal(e.target.value), placeholder: "Enter nickname...", className: "flex-1 border-4 px-3 py-2 input-depth", style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', borderColor: theme.cardBorder, color: theme.txtP, background: theme.rowBg }) }),
@@ -11873,6 +11878,7 @@ return (React.createElement("div", { className: `flex flex-col ${isSmall ? 'p-3'
                     autofillStatus === 'error' && React.createElement("div", { style: { fontFamily: "'Pixelify Sans',cursive", fontSize: '14px', color: '#F87171', marginBottom: 8 } }, "No KB data for this genus yet — fill in manually."),
                     React.createElement("div", { className: "space-y-2" },
                         [
+                            ['Nickname', editNickname, setEditNickname, 'e.g. Giga Chad'],
                             ['Cultivar', editCultivar, setEditCultivar, 'e.g. Thai Constellation'],
                             ['Genus', editGenus, function(v) {
                                 setEditGenus(v);
@@ -16013,7 +16019,7 @@ function GasBannerTip() {
             React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', color: '#7A5528', lineHeight: 1.4 }) }, "Share \u2192 Add to Home Screen for a full-screen app experience without the Google banner.")),
         React.createElement("button", { type: "button", onClick: () => setVisible(false), style: Object.assign(Object.assign({}, pxS), { fontSize: '18px', color: '#5A3818', background: 'none', border: 'none', padding: '0 4px', cursor: 'pointer' }) }, "\u2715")));
 }
-const PLANTOS_VERSION = '1.8';
+const PLANTOS_VERSION = '1.9';
 
 function SplashScreen({ onEnter }) {
   const [hover, setHover] = React.useState(false);

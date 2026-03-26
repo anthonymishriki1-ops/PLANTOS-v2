@@ -5322,7 +5322,7 @@ function PlantDataProvider({ children }) {
         getPlantEnv: (uid) => null, // loaded per-plant via getPlant
         demoEnvironments: [], demoLocationEnvMap: {},
         getArchive: () => gasCall('plantosGetArchive').then(r => Array.isArray(r) ? r : []).catch(() => []),
-        archivePlant: (uid, type, cause, causeDetail) => gasCall('plantosArchivePlant', uid, type, cause, causeDetail),
+        archivePlant: (uid, type, cause, causeDetail, extraFields) => gasCall('plantosArchivePlant', uid, type, cause, causeDetail, extraFields || {}),
         updateArchiveNote: (uid, notes) => gasCall('plantosUpdateArchiveNote', uid, notes),
         demoArchive: [], demoProps: [],
         createBatch, demoPlants: [], getOffspring, getAllPlants,

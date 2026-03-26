@@ -67,6 +67,7 @@ const PLANTOS_BACKEND_CFG = {
     HYBRID_NOTE: 'Hybrid Note',     // FIX #15
     INFRA_RANK: 'Infra Rank',       // FIX #15
     INFRA_EPITHET: 'Infra Epithet', // FIX #15
+    PURCHASE_PRICE: 'Purchase Price',
 
     LATEST_PHOTO_ID: 'Latest Photo ID',
     LATEST_PHOTO_THUMB: 'Latest Photo Thumb',

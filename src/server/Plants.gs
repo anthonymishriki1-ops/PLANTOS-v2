@@ -147,6 +147,7 @@ function plantosGetPlantsByLocationLite(location) {
   const cultivarCol  = plantosCol_(hmap, H.CULTIVAR);
   const pidCol   = plantosCol_(hmap, H.PLANT_ID);
   const ppCol    = plantosCol_(hmap, H.PLANT_PAGE_URL);
+  const purchCol = plantosCol_(hmap, H.PURCHASE_PRICE);
 
   const out = [], errors = [];
   let matched = 0, skipped = 0;
@@ -200,6 +201,7 @@ function plantosGetPlantsByLocationLite(location) {
         potMaterial: potMatCol >= 0 ? plantosSafeStr_(row[potMatCol]).trim() : '',  // FIX #15
         potShape:    potShpCol >= 0 ? plantosSafeStr_(row[potShpCol]).trim() : '',    // FIX #15
         cultivar:    cultivarCol >= 0 ? plantosSafeStr_(row[cultivarCol]).trim() : '', // FIX #15
+        purchasePrice: purchCol >= 0 ? plantosSafeStr_(row[purchCol]).trim() : '',
       });
     } catch(e) {
       let failUid = '';
@@ -285,6 +287,7 @@ function plantosGetAllPlantsLite() {
   const cultivarCol = plantosCol_(hmap, H.CULTIVAR);
   const pidCol = plantosCol_(hmap, H.PLANT_ID);
   const ppCol = plantosCol_(hmap, H.PLANT_PAGE_URL);
+  const purchCol = plantosCol_(hmap, H.PURCHASE_PRICE);
 
   const out = [], errors = [];
   let skipped = 0;
@@ -336,6 +339,7 @@ function plantosGetAllPlantsLite() {
         potMaterial: potMatCol >= 0 ? plantosSafeStr_(row[potMatCol]).trim() : '', // FIX #15
         potShape:    potShpCol >= 0 ? plantosSafeStr_(row[potShpCol]).trim() : '', // FIX #15
         cultivar:    cultivarCol >= 0 ? plantosSafeStr_(row[cultivarCol]).trim() : '', // FIX #15
+        purchasePrice: purchCol >= 0 ? plantosSafeStr_(row[purchCol]).trim() : '',
       });
     } catch(e) {
       let failUid = '';

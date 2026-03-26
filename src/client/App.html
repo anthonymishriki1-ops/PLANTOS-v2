@@ -5453,9 +5453,11 @@ function HomeScreen() {
 
     // \u2500\u2500 Needs Attention Section (compact urgent cards) \u2500\u2500
     const NeedsAttention = () => {
+        const progressDueList = (homeData && homeData.progressDue) ? homeData.progressDue : [];
         const allUrgent = [
             ...dueNow.map(p => Object.assign({}, p, { _urgentType: 'water' })),
-            ...fertDueNow.map(p => Object.assign({}, p, { _urgentType: 'fert' }))
+            ...fertDueNow.map(p => Object.assign({}, p, { _urgentType: 'fert' })),
+            ...progressDueList.map(p => Object.assign({}, p, { _urgentType: 'progress' }))
         ];
         if (allUrgent.length === 0) return null;
         const cap = isDesktop ? 10 : 6;
@@ -5474,18 +5476,18 @@ function HomeScreen() {
             React.createElement("div", { className: isDesktop ? "grid grid-cols-2 gap-2" : "space-y-2" },
                 allUrgent.slice(0, cap).map((p, i) => React.createElement("div", {
                     key: (p._urgentType || '') + '-' + (p.uid || i),
-                    className: "urgent-card stagger-item" + (p._urgentType === 'fert' ? " urgent-card-fert" : ""),
-                    onClick: () => navigate('plant', { uid: p.uid }),
+                    className: "urgent-card stagger-item" + (p._urgentType === 'fert' ? " urgent-card-fert" : "") + (p._urgentType === 'progress' ? " urgent-card-fert" : ""),
+                    onClick: () => p._urgentType === 'progress' ? navigate('progress') : navigate('plant', { uid: p.uid }),
                     style: { animationDelay: Math.min(i * 0.04, 0.24) + 's' }
                 },
                     React.createElement("span", { style: { fontSize: 20, lineHeight: 1, flexShrink: 0 } },
-                        p._urgentType === 'fert' ? '\uD83C\uDF3E' : '\uD83D\uDCA7'),
+                        p._urgentType === 'fert' ? '\uD83C\uDF3E' : p._urgentType === 'progress' ? '\uD83D\uDCCB' : '\uD83D\uDCA7'),
                     React.createElement("div", { className: "flex-1 min-w-0" },
-                        React.createElement("div", { style: Object.assign({}, pxS, { fontSize: '13px', fontWeight: 900, color: p._urgentType === 'fert' ? 'var(--c-fert)' : 'var(--c-urgent)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }) }, p.primary || p.uid),
-                        React.createElement("div", { style: Object.assign({}, pxS, { fontSize: '12px', color: p._urgentType === 'fert' ? 'var(--c-fert)' : 'var(--c-urgent)', opacity: 0.8 }) },
-                            p._urgentType === 'fert' ? 'Needs fertilizer' : (p.due || 'Overdue'))),
-                    React.createElement("span", { style: Object.assign({}, pxS, { fontSize: '11px', fontWeight: 900, color: '#fff', background: p._urgentType === 'fert' ? 'var(--c-fert)' : 'var(--c-urgent)', padding: '3px 8px', flexShrink: 0, whiteSpace: 'nowrap' }) },
-                        p._urgentType === 'fert' ? 'FERT' : 'WATER')
+                        React.createElement("div", { style: Object.assign({}, pxS, { fontSize: '13px', fontWeight: 900, color: p._urgentType === 'progress' ? '#8B5E3C' : p._urgentType === 'fert' ? 'var(--c-fert)' : 'var(--c-urgent)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }) }, p.primary || p.uid),
+                        React.createElement("div", { style: Object.assign({}, pxS, { fontSize: '12px', color: p._urgentType === 'progress' ? '#8B5E3C' : p._urgentType === 'fert' ? 'var(--c-fert)' : 'var(--c-urgent)', opacity: 0.8 }) },
+                            p._urgentType === 'progress' ? 'Progress update due' : p._urgentType === 'fert' ? 'Needs fertilizer' : (p.due || 'Overdue'))),
+                    React.createElement("span", { style: Object.assign({}, pxS, { fontSize: '11px', fontWeight: 900, color: '#fff', background: p._urgentType === 'progress' ? '#8B5E3C' : p._urgentType === 'fert' ? 'var(--c-fert)' : 'var(--c-urgent)', padding: '3px 8px', flexShrink: 0, whiteSpace: 'nowrap' }) },
+                        p._urgentType === 'progress' ? 'UPDATE' : p._urgentType === 'fert' ? 'FERT' : 'WATER')
                 ))));
     };
 
@@ -5686,13 +5688,12 @@ function HomeScreen() {
             React.createElement("span", { className: "nav-icon" }, "\uD83D\uDCA7"),
             React.createElement("span", null, "Watering"),
             dueNow.length > 0 && React.createElement("span", { className: "absolute -top-2 -right-2 border-2 border-white px-1.5 py-0.5 urgent-pulse", style: Object.assign({ background: 'var(--c-urgent)' }, pxS, { fontSize: '12px', color: '#fff', fontWeight: 900, lineHeight: 1.2 }) }, dueNow.length)),
-        React.createElement("button", { type: "button", onClick: () => navigate('carl'),
-            className: "nav-grid-btn hover-lift relative",
+        React.createElement("button", { type: "button", onClick: () => navigate('progress'),
+            className: "nav-grid-btn hover-lift",
             style: { borderColor: '#2E7A2E', background: '#1A3A1A', color: '#A8E89C', boxShadow: '0 3px 0 #1A5A1A' }
         },
-            React.createElement("span", { className: "nav-icon" }, "\uD83C\uDF3F"),
-            React.createElement("span", null, "Carl"),
-            React.createElement("span", { style: { position: 'absolute', top: -6, right: -6, background: '#2E7A2E', border: '2px solid #A8E89C', color: '#A8E89C', fontSize: '10px', fontFamily: "'Press Start 2P', cursive", padding: '1px 5px', lineHeight: 1.4 } }, "AI")),
+            React.createElement("span", { className: "nav-icon" }, "\uD83D\uDCCB"),
+            React.createElement("span", null, "Updates")),
         React.createElement("button", { type: "button", onClick: () => navigate('add'),
             className: "nav-grid-btn hover-lift",
             style: { borderColor: theme.btnS.border, background: theme.btnS.bg, color: theme.btnS.text, boxShadow: '0 3px 0 ' + theme.btnS.border }
@@ -5747,13 +5748,12 @@ function HomeScreen() {
                 React.createElement("span", { className: "nav-icon" }, "\uD83D\uDCA7"),
                 React.createElement("span", null, "Log Watering"),
                 dueNow.length > 0 && React.createElement("span", { className: "absolute -top-2 -right-2 border-2 border-white px-1.5 py-0.5 urgent-pulse", style: Object.assign({ background: 'var(--c-urgent)' }, pxS, { fontSize: '10px', color: '#fff', fontWeight: 900, lineHeight: 1.2 }) }, dueNow.length)),
-            React.createElement("button", { type: "button", onClick: () => navigate('carl'),
-                className: "header-nav-btn hover-lift relative",
+            React.createElement("button", { type: "button", onClick: () => navigate('progress'),
+                className: "header-nav-btn hover-lift",
                 style: { borderColor: '#3A6A20', background: '#2A5A14', color: '#C8E8A8', boxShadow: '0 2px 0 #1A4A08' }
             },
-                React.createElement("span", { className: "nav-icon" }, "\uD83D\uDC74"),
-                React.createElement("span", null, "Carl"),
-                React.createElement("span", { style: { position: 'absolute', top: -5, right: -5, background: '#3A6A20', border: '2px solid #C8E8A8', color: '#C8E8A8', fontSize: '8px', fontFamily: "'Press Start 2P', cursive", padding: '1px 4px', lineHeight: 1.4 } }, "AI")),
+                React.createElement("span", { className: "nav-icon" }, "\uD83D\uDCCB"),
+                React.createElement("span", null, "Updates")),
             React.createElement("button", { type: "button", onClick: () => navigate('add'),
                 className: "header-nav-btn hover-lift",
                 style: { borderColor: '#8AA868', background: '#B8CCA0', color: '#2D5016', boxShadow: '0 2px 0 #7A9858' }
@@ -7504,6 +7504,7 @@ function AddScreen() {
     const [showOptional, setShowOptional] = useState(false);
     const [status, setStatus] = useState(null);
     const [nickname, setNickname] = useState('');
+    const [purchasePrice, setPurchasePrice] = useState('');
 
     const addPhysics = React.useMemo(() => {
         if (!location && !medium && !potMaterial) return null;
@@ -7556,6 +7557,7 @@ function AddScreen() {
                 potSize: String(potSize || '').trim(),
                 everyDays: String(waterEveryDays || '').trim(),
                 fertilizeEveryDays: String(fertilizeEveryDays || '').trim(),
+                purchasePrice: String(purchasePrice || '').trim(),
             };
             let res; try { res = await createPlant(payload); } catch(e) { setStatus({ type: 'error', msg: 'GAS error: ' + (e&&e.message||String(e)) }); return; }
             const uid = res && res.uid ? String(res.uid) : '';
@@ -7810,7 +7812,12 @@ function AddScreen() {
                             ['2"','3"','4"','5"','6"','7"','8"','10"','12"','14"','16"'].map(s => React.createElement("option", { key: s, value: s }, s))))),
                 React.createElement("div", null,
                     React.createElement("div", { style: Object.assign({}, pxS, { fontSize: '14px', fontWeight: 800, color: theme.txtS }) }, "DOB / Acquired"),
-                    React.createElement("input", { type: "date", value: birthday, onChange: e => setBirthday(e.target.value), className: "mt-1 w-full border-4 px-2 py-1.5 input-depth", style: Object.assign({}, pxS, { fontSize: '13px', color: theme.txtP, borderColor: theme.cardBorder, background: theme.cardBg }) }))
+                    React.createElement("input", { type: "date", value: birthday, onChange: e => setBirthday(e.target.value), className: "mt-1 w-full border-4 px-2 py-1.5 input-depth", style: Object.assign({}, pxS, { fontSize: '13px', color: theme.txtP, borderColor: theme.cardBorder, background: theme.cardBg }) })),
+                React.createElement("div", null,
+                    React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtS, fontWeight: 800, marginBottom: 2 }) }, "Purchase Price"),
+                    React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 4 } },
+                        React.createElement("span", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtP, fontWeight: 900 }) }, "$"),
+                        React.createElement("input", { type: "number", step: "0.01", min: "0", value: purchasePrice, onChange: function(e) { setPurchasePrice(e.target.value); }, placeholder: "0.00", className: "flex-1 border-4 px-2 py-1.5 input-depth", style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', color: theme.txtP, borderColor: theme.cardBorder, background: theme.cardBg }) })))
             ),
             !isBatch && (React.createElement(React.Fragment, null,
                 React.createElement("div", { className: "mb-3" },
@@ -10927,6 +10934,7 @@ function PlantScreen({ uid }) {
     const [editInfraRank, setEditInfraRank] = useState('');
     const [editInfraEpithet, setEditInfraEpithet] = useState('');
     const [editNickname, setEditNickname] = useState('');
+    const [editPurchasePrice, setEditPurchasePrice] = useState('');
     const [logNotes, setLogNotes] = useState('');
     const [logWater, setLogWater] = useState(false);
     const [logFert, setLogFert] = useState(false);
@@ -11199,6 +11207,7 @@ function PlantScreen({ uid }) {
         setEditInfraRank(p.infraRank || '');
         setEditInfraEpithet(p.infraEpithet || '');
         setEditNickname(p.nickname || '');
+        setEditPurchasePrice(p.purchasePrice || '');
         setAutofillStatus(null);
         setAutofillPreview(null);
         console.log('[PlantOS] openEdit: setting editOpen=true');
@@ -11331,6 +11340,7 @@ function PlantScreen({ uid }) {
                 cultivar: editCultivar, hybridNote: editHybridNote, potShape: editPotShape,
                 infraRank: editInfraRank, infraEpithet: editInfraEpithet,
                 nickname: editNickname,
+                purchasePrice: editPurchasePrice,
                 recomputeDue: true
             };
             await updatePlant(plant.uid, editPatch);
@@ -11838,7 +11848,8 @@ return (React.createElement("div", { className: `flex flex-col ${isSmall ? 'p-3'
                         position: 'fixed', inset: 0,
                         zIndex: 9999,
                         background: 'rgba(0,0,0,0.55)',
-                        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+                        display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+                        paddingTop: 16,
                     },
                     onClick: function(e) { if (e.target === e.currentTarget) setEditOpen(false); }
                 },
@@ -12036,6 +12047,11 @@ return (React.createElement("div", { className: `flex flex-col ${isSmall ? 'p-3'
                             React.createElement("select", { value: editPotShape, onChange: e => setEditPotShape(e.target.value), className: "w-full border-4 px-3 py-2 mt-1", style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', borderColor: theme.cardBorder, color: theme.txtP, background: theme.rowBg }) },
                                 React.createElement("option", { value: "" }, "\u2014 Not set \u2014"),
                                 POT_SHAPE_NAMES.map(s => React.createElement("option", { key: s, value: s }, s)))),
+                        React.createElement("div", null,
+                            React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtS, fontWeight: 800, marginBottom: 2 }) }, "Purchase Price"),
+                            React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 4 } },
+                                React.createElement("span", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtP, fontWeight: 900 }) }, "$"),
+                                React.createElement("input", { type: "number", step: "0.01", min: "0", value: editPurchasePrice, onChange: function(e) { setEditPurchasePrice(e.target.value); }, placeholder: "0.00", className: "flex-1 border-4 px-2 py-1.5 input-depth", style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', color: theme.txtP, borderColor: theme.cardBorder, background: theme.cardBg }) }))),
                         React.createElement("div", { className: "flex gap-2 pt-1" },
                             React.createElement(PlantButton, { block: false, onClick: submitEdit }, "Save Changes"),
                             React.createElement(PlantButton, { block: false, variant: "ghost", onClick: () => setEditOpen(false) }, "Cancel"))))),
@@ -13214,8 +13230,38 @@ function CarePanel({ plant, physics, env, timeline, onEditOpen, onSaveInterval, 
         }
     }
 
-    if (activeTab === 'carl') {
-        tabContent = React.createElement(CarlNPCPanel, { plant: plant, pxS: pxS, theme: theme, activeChar: activeChar, setActiveChar: setActiveChar, kbEnabled: kbEnabled, setKbEnabled: setKbEnabled });
+    if (activeTab === 'progress') {
+        var _progState = React.useState([]); var _progEntries = _progState[0]; var _setProgEntries = _progState[1];
+        var _progLoading = React.useState(true); var _progLoad = _progLoading[0]; var _setProgLoad = _progLoading[1];
+        var _progFormOpen = React.useState(false); var _showProgForm = _progFormOpen[0]; var _setShowProgForm = _progFormOpen[1];
+        React.useEffect(function() {
+            gasCall('plantosGetProgressUpdates', plant.uid).then(function(res) { _setProgEntries(Array.isArray(res) ? res : []); _setProgLoad(false); }).catch(function() { _setProgLoad(false); });
+        }, [plant.uid]);
+        tabContent = React.createElement('div', null,
+            React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 } },
+                React.createElement('div', { style: Object.assign({}, pxS, { fontSize: 14, fontWeight: 900, color: theme.txtP }) }, '\uD83D\uDCCB Progress History'),
+                React.createElement(PlantButton, { onClick: function() { _setShowProgForm(true); }, className: 'px-3 py-1' }, '+ New Update')),
+            _progLoad && React.createElement(StatusMessage, { type: 'loading', message: 'Loading...' }),
+            !_progLoad && _progEntries.length === 0 && React.createElement('div', { style: Object.assign({}, pxS, { fontSize: 13, color: theme.txtS, textAlign: 'center', padding: '20px 0' }) }, 'No progress updates yet. Start tracking!'),
+            !_progLoad && _progEntries.map(function(entry) {
+                var hc = PROGRESS_HEALTH.find(function(h){return h.id===entry.health;}) || PROGRESS_HEALTH[2];
+                return React.createElement('div', { key: entry.id, style: { border: '3px solid ' + theme.rowBorder, padding: '10px 12px', marginBottom: 8, background: theme.rowBg } },
+                    React.createElement('div', { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 } },
+                        React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: 6 } },
+                            React.createElement('span', { style: { fontSize: 18 } }, hc.icon),
+                            React.createElement('span', { style: Object.assign({}, pxS, { fontSize: 13, fontWeight: 900, color: hc.color }) }, entry.health)),
+                        React.createElement('span', { style: Object.assign({}, pxS, { fontSize: 12, color: theme.txtS }) }, entry.createdAt || '')),
+                    entry.comment && React.createElement('div', { style: Object.assign({}, pxS, { fontSize: 13, color: theme.txtP, marginTop: 4 }) }, entry.comment),
+                    entry.sizeCm && React.createElement('div', { style: Object.assign({}, pxS, { fontSize: 12, color: theme.txtS, marginTop: 2 }) }, '\uD83D\uDCCF ' + entry.sizeCm + ' cm'),
+                    entry.tags && entry.tags.length > 0 && React.createElement('div', { style: { display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 } },
+                        entry.tags.map(function(t) { return React.createElement('span', { key: t, style: Object.assign({}, pxS, { fontSize: 11, padding: '2px 6px', background: theme.btnP.bg, color: theme.btnP.text, fontWeight: 800 }) }, t); })),
+                    entry.photoThumbUrl && React.createElement('img', { src: entry.photoThumbUrl, style: { width: '100%', maxHeight: 150, objectFit: 'cover', marginTop: 6, border: '2px solid ' + theme.rowBorder } }));
+            }),
+            _showProgForm && React.createElement(ProgressUpdateForm, { plant: plant, onClose: function() { _setShowProgForm(false); }, onDone: function() {
+                _setShowProgForm(false);
+                _setProgLoad(true);
+                gasCall('plantosGetProgressUpdates', plant.uid).then(function(res) { _setProgEntries(Array.isArray(res) ? res : []); _setProgLoad(false); }).catch(function() { _setProgLoad(false); });
+            }}));
     }
 
     return React.createElement('div', { style: { marginTop: 10 } },
@@ -13228,7 +13274,7 @@ function CarePanel({ plant, physics, env, timeline, onEditOpen, onSaveInterval, 
             React.createElement(TabBtn, { id: 'status',   icon: '\uD83D\uDCCA', label: 'STATUS' }),
             React.createElement(TabBtn, { id: 'schedule', icon: '\uD83D\uDCC5', label: 'SCHED' }),
             React.createElement(TabBtn, { id: 'info',     icon: '\uD83D\uDCD6', label: 'INFO' }),
-            React.createElement(TabBtn, { id: 'carl',     icon: '\uD83C\uDF3F', label: 'CARL' })
+            React.createElement(TabBtn, { id: 'progress', icon: '\uD83D\uDCCB', label: 'UPDATES' })
         ),
         React.createElement('div', { key: activeTab, style: {
             border: '3px solid ' + theme.cardBorder,
@@ -14306,15 +14352,22 @@ function CompostModal({ plant, onClose, onDone }) {
     const { archivePlant } = usePlantData();
     const theme = useTheme();
     const px8S = { fontFamily: "'Press Start 2P', cursive", fontSize: '14px' };
-    const [step, setStep] = useState('type'); // type \u2192 cause_cat \u2192 cause_option \u2192 confirm
-    const [type, setType] = useState(null); // 'deceased' | 'rehomed'
+    const [step, setStep] = useState('type'); // type \u2192 cause_cat \u2192 cause_option \u2192 confirm | sold_form
+    const [type, setType] = useState(null); // 'deceased' | 'rehomed' | 'sold'
     const [causeCat, setCauseCat] = useState(null);
     const [cause, setCause] = useState(null);
     const [detail, setDetail] = useState('');
     const [saving, setSaving] = useState(false);
+    const [soldPrice, setSoldPrice] = useState('');
+    const [soldDate, setSoldDate] = useState(new Date().toISOString().slice(0, 10));
+    const [soldNotes, setSoldNotes] = useState('');
     async function handleConfirm() {
         setSaving(true);
-        await archivePlant(plant.uid, type, cause, detail);
+        if (type === 'sold') {
+            await archivePlant(plant.uid, 'sold', null, null, { price: soldPrice, soldDate: soldDate, note: soldNotes });
+        } else {
+            await archivePlant(plant.uid, type, cause, detail);
+        }
         setSaving(false);
         onDone();
     }
@@ -14335,7 +14388,8 @@ function CompostModal({ plant, onClose, onDone }) {
             step === 'type' && (React.createElement(React.Fragment, null,
                 React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtS, marginBottom: 10 }) }, "What happened to this plant?"),
                 React.createElement("button", { type: "button", style: btnStyle(type === 'deceased', '#c0392b'), onClick: () => { setType('deceased'); setStep('cause_cat'); } }, "\uD83E\uDEA6 Compost Bin \u2014 it didn't make it"),
-                React.createElement("button", { type: "button", style: btnStyle(type === 'rehomed', '#27ae60'), onClick: () => { setType('rehomed'); setStep('confirm'); } }, "\uD83C\uDFE0 Given Away \u2014 rehomed to a new home"))),
+                React.createElement("button", { type: "button", style: btnStyle(type === 'rehomed', '#27ae60'), onClick: () => { setType('rehomed'); setStep('confirm'); } }, "\uD83C\uDFE0 Given Away \u2014 rehomed to a new home"),
+                React.createElement("button", { type: "button", style: btnStyle(type === 'sold', '#d4a017'), onClick: () => { setType('sold'); setStep('sold_form'); } }, "\uD83D\uDCB0 Sold \u2014 sold this plant"))),
             step === 'cause_cat' && (React.createElement(React.Fragment, null,
                 React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtS, marginBottom: 10 }) }, "What was the main cause?"),
                 Object.entries(DEATH_CAUSES).map(([key, cat]) => (React.createElement("button", { key: key, type: "button", style: btnStyle(causeCat === key, cat.color), onClick: () => { setCauseCat(key); setCause(null); setStep('cause_option'); } }, cat.label))),
@@ -14346,6 +14400,22 @@ function CompostModal({ plant, onClose, onDone }) {
                     " \u2014 which specifically?"),
                 DEATH_CAUSES[causeCat].options.map(opt => (React.createElement("button", { key: opt, type: "button", style: btnStyle(cause === opt, DEATH_CAUSES[causeCat].color), onClick: () => { setCause(opt); setStep('confirm'); } }, opt))),
                 React.createElement("button", { type: "button", style: Object.assign(Object.assign({}, pxS), { fontSize: '12px', color: theme.txtS, background: 'none', border: 'none', cursor: 'pointer', marginTop: 4 }), onClick: () => setStep('cause_cat') }, "\< Back"))),
+            step === 'sold_form' && (React.createElement(React.Fragment, null,
+                React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtS, marginBottom: 10 }) }, "\uD83D\uDCB0 Enter sale details"),
+                React.createElement("div", { style: { marginBottom: 10 } },
+                    React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtS, fontWeight: 800, marginBottom: 4 }) }, "Price Sold"),
+                    React.createElement("div", { style: { display: 'flex', alignItems: 'center', gap: 4 } },
+                        React.createElement("span", { style: Object.assign(Object.assign({}, pxS), { fontSize: '16px', fontWeight: 900, color: theme.txtP }) }, "$"),
+                        React.createElement("input", { type: "number", step: "0.01", min: "0", value: soldPrice, onChange: function(e) { setSoldPrice(e.target.value); }, placeholder: "0.00", style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', flex: 1, border: '3px solid ' + theme.cardBorder, padding: '8px', background: theme.rowBg, color: theme.txtP }) }))),
+                React.createElement("div", { style: { marginBottom: 10 } },
+                    React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtS, fontWeight: 800, marginBottom: 4 }) }, "Date Sold"),
+                    React.createElement("input", { type: "date", value: soldDate, onChange: function(e) { setSoldDate(e.target.value); }, style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', width: '100%', border: '3px solid ' + theme.cardBorder, padding: '8px', background: theme.rowBg, color: theme.txtP }) })),
+                React.createElement("div", { style: { marginBottom: 12 } },
+                    React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtS, fontWeight: 800, marginBottom: 4 }) }, "Notes (optional)"),
+                    React.createElement("textarea", { value: soldNotes, onChange: function(e) { setSoldNotes(e.target.value); }, rows: 3, placeholder: "Buyer, platform, shipping notes...", style: Object.assign(Object.assign({}, pxS), { fontSize: '12px', width: '100%', border: '3px solid ' + theme.cardBorder, padding: '8px', resize: 'none', background: theme.rowBg, color: theme.txtP }) })),
+                React.createElement("div", { style: { display: 'flex', gap: 8 } },
+                    React.createElement("button", { type: "button", onClick: handleConfirm, disabled: saving, style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', fontWeight: 900, flex: 1, padding: '12px', border: '3px solid #d4a017', background: '#d4a017', color: '#fff', cursor: 'pointer', boxShadow: '0 3px 0 #b8860baa' }) }, saving ? '...' : '\uD83D\uDCB0 Confirm Sale'),
+                    React.createElement("button", { type: "button", onClick: function() { setStep('type'); }, style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', color: theme.txtS, background: 'none', border: '2px solid ' + theme.rowBorder, padding: '12px 16px', cursor: 'pointer' }) }, "\< Back")))),
             step === 'confirm' && (React.createElement(React.Fragment, null,
                 React.createElement("div", { style: { marginBottom: 12, padding: '8px 12px', border: `2px solid ${type === 'deceased' ? '#c0392b' : '#27ae60'}`,
                         background: type === 'deceased' ? '#fdf0ee' : '#f0fdf4' } },
@@ -15545,7 +15615,7 @@ function BottomNav({ current, navigate, goBack }) {
         { id: 'home',      icon: '🏠' },
         { id: 'my-plants', icon: '🌿' },
         { id: 'watering',  icon: '💧' },
-        { id: 'carl',      icon: '👴' },
+        { id: 'progress',  icon: '\uD83D\uDCCB' },
         { id: 'add',       icon: '➕' },
     ];
     return React.createElement("div", {
@@ -15962,40 +16032,204 @@ function SettingsScreen() {
 }
 </script>
 
-<?!= include('client/carl') ?>
+<!-- Carl AI removed — replaced by Progress Update system -->
 
 <script type="text/javascript">
-function CarlHomeScreen() {
-    const { navigate } = useNavigation();
-    const { allPlantsCache, allPlantsCacheReady, getAllPlants } = usePlantData();
-    const theme = useTheme();
-    const [query, setQuery] = React.useState('');
-    React.useEffect(() => { if (!allPlantsCacheReady) { getAllPlants().catch(() => {}); } }, []);
-    const filtered = React.useMemo(() => {
-        const list = allPlantsCache || [];
-        if (!query.trim()) return list.slice(0, 30);
-        const q = query.toLowerCase();
-        return list.filter(p => (p.primary||p.genus||'').toLowerCase().includes(q)||(p.nickname||'').toLowerCase().includes(q)).slice(0,30);
-    }, [allPlantsCache, query]);
-    return React.createElement('div', { className: 'flex flex-col pb-4 screen-enter', style: { maxWidth: 480, margin: '0 auto', padding: '0 12px' } },
-        React.createElement('div', { style: { textAlign: 'center', padding: '24px 16px 16px' } },
-            React.createElement('div', { style: { fontSize: 48, marginBottom: 8 } }, '\uD83C\uDF3F'),
-            React.createElement('div', { style: { fontFamily: 'var(--font-pixel)', fontSize: 13, color: theme.txtP, marginBottom: 6 } }, 'CARL'),
-            React.createElement('div', { style: { fontSize: 13, color: theme.txtS } }, 'Pick a plant to chat with Carl')),
-        React.createElement('input', { type: 'search', placeholder: 'Search plants...', value: query, onChange: function(e) { setQuery(e.target.value); },
-            style: { width: '100%', padding: '10px 14px', borderRadius: 8, border: '2px solid ' + theme.cardBorder, background: theme.cardBg, color: theme.txtP, fontSize: 15, marginBottom: 12, fontFamily: 'var(--font-body)', outline: 'none', boxSizing: 'border-box' } }),
-        React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: 8 } },
-            filtered.map(function(p) { return React.createElement('button', { key: p.uid||p.primary, type: 'button', onClick: function() { navigate('plant', { uid: p.uid }); },
-                style: { display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: theme.cardBg, border: '2px solid ' + theme.cardBorder, borderRadius: 10, cursor: 'pointer', textAlign: 'left', width: '100%' } },
-                React.createElement('span', { style: { fontSize: 24 } }, '\uD83C\uDF31'),
-                React.createElement('div', null,
-                    React.createElement('div', { style: { color: theme.txtP, fontWeight: 700, fontSize: 14 } }, p.nickname||p.primary||p.genus),
-                    p.nickname && React.createElement('div', { style: { color: theme.txtS, fontSize: 12 } }, p.primary||p.genus)
-                )
-            ); })
-        )
-    );
+var PROGRESS_TAGS = ['New leaf', 'Flowering', 'Plantlet', 'Big leaves', 'New shoots', 'Done flowering'];
+var PROGRESS_HEALTH = [
+    { id: 'Sick', icon: '\uD83E\uDE7A', label: 'Sick', color: '#c0392b' },
+    { id: 'Bad', icon: '\uD83E\uDEB4', label: 'Bad', color: '#e67e22' },
+    { id: 'Good', icon: '\uD83C\uDF31', label: 'Good', color: '#27ae60' },
+    { id: 'Excellent', icon: '\uD83C\uDF3C', label: 'Excellent', color: '#2ecc71' }
+];
+
+function ProgressUpdateForm({ plant, onClose, onDone }) {
+    var theme = useTheme();
+    var { uploadPlantPhoto } = usePlantData();
+    var [health, setHealth] = useState('Good');
+    var [comment, setComment] = useState('');
+    var [sizeCm, setSizeCm] = useState('');
+    var [tags, setTags] = useState([]);
+    var [photoDataUrl, setPhotoDataUrl] = useState(null);
+    var [photoPreview, setPhotoPreview] = useState(null);
+    var [saving, setSaving] = useState(false);
+    var [msg, setMsg] = useState(null);
+    var fileRef = useRef(null);
+
+    function toggleTag(t) { setTags(function(prev) { return prev.includes(t) ? prev.filter(function(x){return x!==t;}) : prev.concat([t]); }); }
+
+    async function onPhotoPicked(e) {
+        var file = e.target.files && e.target.files[0]; e.target.value = '';
+        if (!file) return;
+        try {
+            var dataUrl = await compressImageToJpegDataUrl(file, 1600, 0.82);
+            setPhotoDataUrl(dataUrl);
+            setPhotoPreview(dataUrl);
+        } catch(err) { setMsg({ type: 'error', text: 'Photo failed' }); }
+    }
+
+    async function handleSave() {
+        if (!health) return;
+        setSaving(true); setMsg(null);
+        try {
+            var payload = { health: health, comment: comment, sizeCm: sizeCm ? Number(sizeCm) : null, tags: tags };
+            if (photoDataUrl) payload.photoDataUrl = photoDataUrl;
+            var res = await gasCall('plantosCreateProgressUpdate', plant.uid, payload);
+            if (res && res.ok) {
+                setMsg({ type: 'success', text: 'Progress saved \u2713' });
+                setTimeout(function() { onDone(); }, 800);
+            } else {
+                setMsg({ type: 'error', text: (res && res.error) || 'Failed' });
+            }
+        } catch(err) {
+            setMsg({ type: 'error', text: err && err.message ? err.message : 'Failed' });
+        }
+        setSaving(false);
+    }
+
+    var cardStyle = { background: '#f4f1eb', border: '1px solid #e0ddd5', borderRadius: 12, padding: '16px 14px', marginBottom: 14 };
+    var labelStyle = { fontFamily: "'Pixelify Sans',cursive", fontSize: 16, fontWeight: 800, color: '#2C3E1A', marginBottom: 8 };
+    var subStyle = { fontFamily: "'Pixelify Sans',cursive", fontSize: 13, color: '#6A7A58', marginBottom: 10 };
+
+    return React.createElement("div", { style: { position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 0 } },
+        React.createElement("div", { style: { width: '100%', maxWidth: 480, maxHeight: '100vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch', background: '#eae7df', padding: '0 0 80px' } },
+            React.createElement("input", { type: "file", accept: "image/*", ref: fileRef, style: { display: 'none' }, onChange: onPhotoPicked }),
+            // Header
+            React.createElement("div", { style: { padding: '20px 16px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' } },
+                React.createElement("div", null,
+                    React.createElement("div", { style: { fontFamily: "'Pixelify Sans',cursive", fontSize: 24, fontWeight: 900, color: '#1A2E0A' } }, "Progress update"),
+                    React.createElement("div", { style: { fontFamily: "'Pixelify Sans',cursive", fontSize: 14, color: '#6A7A58', marginTop: 4 } }, "Capture your " + (plant.nickname || plant.genus || 'plant') + "'s growth by adding a photo, documenting each phase of its development.")),
+                React.createElement("button", { type: "button", onClick: onClose, style: { background: '#e0ddd5', border: 'none', borderRadius: '50%', width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: 18, color: '#555', flexShrink: 0 } }, "\u2715")),
+            // Messages
+            msg && React.createElement("div", { style: { padding: '0 16px', marginBottom: 8 } },
+                React.createElement(StatusMessage, { type: msg.type, message: msg.text })),
+            // Health
+            React.createElement("div", { style: Object.assign({}, cardStyle, { margin: '0 16px 14px' }) },
+                React.createElement("div", { style: labelStyle }, "How healthy is your plant?"),
+                React.createElement("div", { style: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 } },
+                    PROGRESS_HEALTH.map(function(h) {
+                        var active = health === h.id;
+                        return React.createElement("button", { key: h.id, type: "button", onClick: function() { setHealth(h.id); }, style: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, padding: '12px 4px', border: active ? '2px solid ' + h.color : '2px solid #e0ddd5', borderRadius: 10, background: active ? '#fff' : '#f9f7f3', cursor: 'pointer', boxShadow: active ? '0 2px 8px rgba(0,0,0,0.12)' : 'none' } },
+                            React.createElement("span", { style: { fontSize: 28 } }, h.icon),
+                            React.createElement("span", { style: { fontFamily: "'Pixelify Sans',cursive", fontSize: 12, fontWeight: 800, color: active ? h.color : '#6A7A58' } }, h.label));
+                    }))),
+            // Photo
+            React.createElement("div", { style: Object.assign({}, cardStyle, { margin: '0 16px 14px' }) },
+                React.createElement("div", { style: labelStyle }, "Photo"),
+                React.createElement("div", { style: subStyle }, "Add a photo of your plant (optional)"),
+                React.createElement("button", { type: "button", onClick: function() { if (fileRef.current) fileRef.current.click(); }, style: { width: '100%', height: 120, border: '2px dashed #b8b4a8', borderRadius: 12, background: photoPreview ? 'none' : '#f9f7f3', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden', padding: 0 } },
+                    photoPreview
+                        ? React.createElement("img", { src: photoPreview, style: { width: '100%', height: '100%', objectFit: 'cover' } })
+                        : React.createElement("span", { style: { fontSize: 32, color: '#999' } }, "\uD83D\uDCF7"))),
+            // Comment
+            React.createElement("div", { style: Object.assign({}, cardStyle, { margin: '0 16px 14px' }) },
+                React.createElement("div", { style: labelStyle }, "Comment"),
+                React.createElement("div", { style: subStyle }, "Add a short comment about this update (optional)"),
+                React.createElement("textarea", { value: comment, onChange: function(e) { setComment(e.target.value); }, rows: 3, placeholder: "Add comment...", style: { width: '100%', border: 'none', borderRadius: 8, background: '#f4f1eb', padding: '10px 12px', fontFamily: "'Pixelify Sans',cursive", fontSize: 14, color: '#2C3E1A', resize: 'none', outline: 'none', boxSizing: 'border-box' } })),
+            // Size
+            React.createElement("div", { style: Object.assign({}, cardStyle, { margin: '0 16px 14px' }) },
+                React.createElement("div", { style: labelStyle }, "What size is your plant? (optional)"),
+                React.createElement("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8 } },
+                    React.createElement("input", { type: "number", min: "0", max: "300", value: sizeCm, onChange: function(e) { setSizeCm(e.target.value); }, placeholder: "0", style: { width: 80, textAlign: 'center', border: 'none', borderRadius: 8, background: '#ddd8cd', padding: '10px', fontFamily: "'Pixelify Sans',cursive", fontSize: 20, fontWeight: 900, color: '#2C3E1A' } }),
+                    React.createElement("span", { style: { fontFamily: "'Pixelify Sans',cursive", fontSize: 18, fontWeight: 800, color: '#2C3E1A' } }, "cm")),
+                React.createElement("input", { type: "range", min: "0", max: "200", value: sizeCm || 0, onChange: function(e) { setSizeCm(e.target.value); }, style: { width: '100%', accentColor: '#3A5A1E' } })),
+            // Tags
+            React.createElement("div", { style: Object.assign({}, cardStyle, { margin: '0 16px 14px' }) },
+                React.createElement("div", { style: labelStyle }, "Worth noticing"),
+                React.createElement("div", { style: subStyle }, "Pick a few options (optional)"),
+                React.createElement("div", { style: { display: 'flex', flexWrap: 'wrap', gap: 6 } },
+                    PROGRESS_TAGS.map(function(t) {
+                        var active = tags.includes(t);
+                        return React.createElement("button", { key: t, type: "button", onClick: function() { toggleTag(t); }, style: { fontFamily: "'Pixelify Sans',cursive", fontSize: 13, padding: '8px 14px', borderRadius: 20, border: active ? '2px solid #3A5A1E' : '2px solid #d5d1c8', background: active ? '#3A5A1E' : '#f4f1eb', color: active ? '#fff' : '#555', cursor: 'pointer', fontWeight: 700 } }, t);
+                    }))),
+            // Save button
+            React.createElement("div", { style: { position: 'fixed', bottom: 0, left: 0, right: 0, padding: '12px 16px', background: '#eae7df', borderTop: '1px solid #d5d1c8', zIndex: 10000 } },
+                React.createElement("button", { type: "button", onClick: handleSave, disabled: saving, style: { width: '100%', maxWidth: 480, margin: '0 auto', display: 'block', padding: '14px', border: 'none', borderRadius: 12, background: '#2C3E1A', color: '#fff', fontFamily: "'Pixelify Sans',cursive", fontSize: 16, fontWeight: 900, cursor: 'pointer', opacity: saving ? 0.6 : 1 } }, saving ? 'Saving...' : 'Save'))));
 }
+
+function ProgressScreen() {
+    var { navigate } = useNavigation();
+    var { allPlantsCache, allPlantsCacheReady, getAllPlants, getLatestPhoto } = usePlantData();
+    var theme = useTheme();
+    var { isSmall } = useScreenSize();
+    var [progressDue, setProgressDue] = useState([]);
+    var [loading, setLoading] = useState(true);
+    var [selectedPlant, setSelectedPlant] = useState(null);
+    var [thumbs, setThumbs] = useState({});
+
+    useEffect(function() {
+        gasCall('plantosGetProgressDue').then(function(res) {
+            setProgressDue(Array.isArray(res) ? res : []);
+            setLoading(false);
+        }).catch(function() { setLoading(false); });
+        if (!allPlantsCacheReady) getAllPlants().catch(function(){});
+    }, []);
+
+    // Load thumbnails
+    useEffect(function() {
+        var alive = true;
+        (async function() {
+            var next = {};
+            for (var i = 0; i < Math.min(progressDue.length, 20); i++) {
+                var uid = progressDue[i].uid;
+                if (thumbs[uid] || next[uid]) continue;
+                try {
+                    var res = await getLatestPhoto(uid);
+                    if (res && res.ok && res.photo && res.photo.thumbUrl) next[uid] = res.photo.thumbUrl;
+                } catch(e){}
+            }
+            if (alive && Object.keys(next).length) setThumbs(function(prev) { return Object.assign({}, prev, next); });
+        })();
+        return function(){ alive = false; };
+    }, [progressDue]);
+
+    function openUpdate(uid) {
+        var plant = (allPlantsCache || []).find(function(p) { return String(p.uid) === String(uid); });
+        if (plant) setSelectedPlant(plant);
+        else {
+            gasCall('plantosGetPlant', uid).then(function(res) {
+                if (res && res.ok && res.plant) setSelectedPlant(res.plant);
+                else if (res && res.plant) setSelectedPlant(res.plant);
+            }).catch(function(){});
+        }
+    }
+
+    function onUpdateDone() {
+        setSelectedPlant(null);
+        setLoading(true);
+        gasCall('plantosGetProgressDue').then(function(res) {
+            setProgressDue(Array.isArray(res) ? res : []);
+            setLoading(false);
+        }).catch(function() { setLoading(false); });
+    }
+
+    var allPlants = allPlantsCache || [];
+    var upToDate = allPlants.length - progressDue.length;
+
+    return React.createElement('div', { className: 'flex flex-col pb-4 screen-enter', style: { maxWidth: 520, margin: '0 auto', padding: '0 12px' } },
+        React.createElement('div', { style: { textAlign: 'center', padding: '20px 16px 12px' } },
+            React.createElement('div', { style: { fontSize: 40, marginBottom: 6 } }, '\uD83D\uDCCB'),
+            React.createElement('div', { style: { fontFamily: "var(--font-pixel)", fontSize: 13, color: theme.txtP, letterSpacing: '0.06em' } }, 'PROGRESS UPDATES'),
+            React.createElement('div', { style: { fontFamily: "var(--font-body)", fontSize: 13, color: theme.txtS, marginTop: 4 } },
+                progressDue.length > 0 ? progressDue.length + ' plant' + (progressDue.length !== 1 ? 's' : '') + ' due for an update' : 'All plants up to date \u2713')),
+        loading && React.createElement(StatusMessage, { type: 'loading', message: 'Loading...' }),
+        !loading && progressDue.length === 0 && React.createElement('div', { style: { textAlign: 'center', padding: '30px 16px', color: theme.txtS, fontFamily: "var(--font-body)", fontSize: 14 } }, 'No progress updates needed right now. Check back in a few days!'),
+        !loading && progressDue.map(function(p) {
+            return React.createElement('div', { key: p.uid, onClick: function() { openUpdate(p.uid); }, style: { display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', background: theme.cardBg, border: '3px solid ' + theme.cardBorder, marginBottom: 8, cursor: 'pointer', boxShadow: '3px 3px 0 ' + theme.cardBorder } },
+                React.createElement('div', { style: { width: 44, height: 44, borderRadius: 6, overflow: 'hidden', background: '#1A1008', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+                    thumbs[p.uid]
+                        ? React.createElement('img', { src: thumbs[p.uid], style: { width: '100%', height: '100%', objectFit: 'cover' } })
+                        : React.createElement('span', { style: { fontSize: 20 } }, '\uD83C\uDF31')),
+                React.createElement('div', { style: { flex: 1, minWidth: 0 } },
+                    React.createElement('div', { style: { fontFamily: "var(--font-body)", fontSize: 14, fontWeight: 800, color: theme.txtP, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, p.primary),
+                    React.createElement('div', { style: { fontFamily: "var(--font-body)", fontSize: 12, color: theme.txtS } },
+                        p.lastUpdate ? p.daysSince + ' days since last update' : 'Never updated')),
+                React.createElement('span', { style: { fontFamily: "var(--font-pixel)", fontSize: 10, fontWeight: 900, color: '#fff', background: 'var(--c-urgent)', padding: '3px 8px', flexShrink: 0 } }, 'UPDATE'));
+        }),
+        selectedPlant && React.createElement(ProgressUpdateForm, { plant: selectedPlant, onClose: function() { setSelectedPlant(null); }, onDone: onUpdateDone }));
+}
+
+function CarlHomeScreen() { return React.createElement(ProgressScreen, null); }
 
 function AppContent() {
     React.useEffect(() => { if (!DEMO_MODE && typeof kbCacheLoad === 'function') kbCacheLoad(); }, []);
@@ -16009,8 +16243,8 @@ function AppContent() {
             case 'watering': return React.createElement(WateringScreen, null);
             case 'quick-log': return React.createElement(WateringScreen, null);
             case 'add': return React.createElement(AddScreen, null);
-            case 'carl': return React.createElement(CarlHomeScreen, null);
-            case 'carl-chat': return React.createElement(CarlClassicScreen, null);
+            case 'progress': return React.createElement(ProgressScreen, null);
+            case 'carl': return React.createElement(ProgressScreen, null);
             case 'my-plants': return React.createElement(MyPlantsScreen, { openTab: (route.params && route.params.openTab) ? route.params.openTab : null, prefill: (route.params && route.params.prefill) ? route.params.prefill : null });
             case 'environments': return React.createElement(EnvironmentsScreen, null);
             case 'archive': return React.createElement(ArchiveScreen, null);

@@ -96,6 +96,9 @@ function doPost(e) {
       plantosUpdateProp: plantosUpdateProp,
       plantosAddPropNote: plantosAddPropNote,
       plantosGraduateProp: plantosGraduateProp,
+      plantosGetProgressUpdates: plantosGetProgressUpdates,
+      plantosCreateProgressUpdate: plantosCreateProgressUpdate,
+      plantosGetProgressDue: plantosGetProgressDue,
       plantosDebug: plantosDebug,
       plantosDebugLocations: plantosDebugLocations,
       kbGetPlantFacts: kbGetPlantFacts,
@@ -208,6 +211,8 @@ function plantosArchivePlant(uid, type, cause, causeDetail, extraFields) {
   const entry = { id: 'ARC_' + Date.now(), uid: plant.uid, primary: plant.primary, genus: plant.genus || '', type: plantosSafeStr_(type).trim() || 'deceased', cause: plantosSafeStr_(cause).trim(), causeDetail: plantosSafeStr_(causeDetail).trim(), archivedAt: plantosFmtDate_(plantosNow_()), note: plantosSafeStr_(extraFields.note || '').trim() };
   if (extraFields.deathDate) entry.deathDate = extraFields.deathDate;
   if (extraFields.rehomeDate) entry.rehomeDate = extraFields.rehomeDate;
+  if (extraFields.price) entry.price = extraFields.price;
+  if (extraFields.soldDate) entry.soldDate = extraFields.soldDate;
   archive.unshift(entry);
   PropertiesService.getScriptProperties().setProperty(PLANTOS_ARCHIVE_KEY, JSON.stringify(archive));
   if (rowIdx >= 0) sh.deleteRow(rowIdx + 1);
@@ -221,6 +226,116 @@ function plantosUpdateArchiveNote(id, note) {
   archive[idx].note = plantosSafeStr_(note).trim();
   PropertiesService.getScriptProperties().setProperty(PLANTOS_ARCHIVE_KEY, JSON.stringify(archive));
   return { ok: true };
+}
+
+/* ===================== PROGRESS UPDATES ===================== */
+
+const PLANTOS_PROGRESS_KEY = 'PLANTOS_PROGRESS_UPDATES';
+
+function plantosGetProgressUpdates(uid) {
+  var all = [];
+  try { all = JSON.parse(PropertiesService.getScriptProperties().getProperty(PLANTOS_PROGRESS_KEY) || '[]'); } catch(e) {}
+  var needle = plantosSafeStr_(uid).trim();
+  if (!needle) return all;
+  return all.filter(function(e) { return e.uid === needle; });
+}
+
+function plantosCreateProgressUpdate(uid, payload) {
+  payload = payload || {};
+  var needle = plantosSafeStr_(uid).trim();
+  if (!needle) throw new Error('Missing uid');
+  var now = plantosNow_();
+  var entry = {
+    id: 'PROG_' + Date.now(),
+    uid: needle,
+    health: plantosSafeStr_(payload.health || 'Good').trim(),
+    comment: plantosSafeStr_(payload.comment || '').trim(),
+    sizeCm: payload.sizeCm ? Number(payload.sizeCm) : null,
+    tags: Array.isArray(payload.tags) ? payload.tags.map(function(t){ return plantosSafeStr_(t).trim(); }) : [],
+    createdAt: plantosFmtDate_(now),
+    photoFileId: null,
+    photoThumbUrl: null,
+  };
+
+  // Upload photo if provided (reuses plant photo infrastructure)
+  if (payload.photoDataUrl) {
+    try {
+      var photoRes = plantosUploadPlantPhoto(needle, payload.photoDataUrl, 'progress_' + entry.id + '.jpg');
+      if (photoRes && photoRes.ok && photoRes.photo) {
+        entry.photoFileId = photoRes.photo.fileId || null;
+        entry.photoThumbUrl = photoRes.photo.thumbUrl || null;
+      }
+    } catch(e) { Logger.log('[PlantOS] Progress photo upload failed: ' + e.message); }
+  }
+
+  // Store progress entry
+  var all = [];
+  try { all = JSON.parse(PropertiesService.getScriptProperties().getProperty(PLANTOS_PROGRESS_KEY) || '[]'); } catch(e) {}
+  all.unshift(entry);
+  PropertiesService.getScriptProperties().setProperty(PLANTOS_PROGRESS_KEY, JSON.stringify(all.slice(0, 500)));
+
+  // Update LAST_PROGRESS_UPDATE column on the plant row
+  try {
+    var inv = plantosReadInventory_();
+    var uidCol = plantosCol_(inv.hmap, PLANTOS_BACKEND_CFG.HEADERS.UID);
+    var progCol = plantosCol_(inv.hmap, PLANTOS_BACKEND_CFG.HEADERS.LAST_PROGRESS_UPDATE);
+    if (uidCol >= 0 && progCol >= 0) {
+      for (var r = 1; r < inv.values.length; r++) {
+        if (plantosSafeStr_(inv.values[r][uidCol]).trim() === needle) {
+          inv.sh.getRange(r + 1, progCol + 1).setValue(now);
+          break;
+        }
+      }
+    }
+  } catch(e) { Logger.log('[PlantOS] Failed to update LAST_PROGRESS_UPDATE column: ' + e.message); }
+
+  // Append to plant timeline
+  var details = entry.health;
+  if (entry.comment) details += ': ' + entry.comment;
+  if (entry.tags.length) details += ' [' + entry.tags.join(', ') + ']';
+  plantosTimelineAppend_(needle, { note: true, notes: '\uD83D\uDCCB Progress: ' + details }, now);
+
+  return { ok: true, id: entry.id };
+}
+
+function plantosGetProgressDue() {
+  var inv = plantosReadInventory_();
+  var H = PLANTOS_BACKEND_CFG.HEADERS;
+  var uidCol = plantosCol_(inv.hmap, H.UID);
+  var nicknameCol = plantosCol_(inv.hmap, H.NICKNAME);
+  var genusCol = plantosCol_(inv.hmap, H.GENUS);
+  var taxonCol = plantosCol_(inv.hmap, H.TAXON);
+  var birthdayCol = plantosCol_(inv.hmap, H.BIRTHDAY);
+  var progCol = plantosCol_(inv.hmap, H.LAST_PROGRESS_UPDATE);
+  var now = plantosNow_();
+  var result = [];
+  for (var r = 1; r < inv.values.length; r++) {
+    var row = inv.values[r];
+    var uid = uidCol >= 0 ? plantosSafeStr_(row[uidCol]).trim() : '';
+    if (!uid) continue;
+    var nn = nicknameCol >= 0 ? plantosSafeStr_(row[nicknameCol]).trim() : '';
+    var genus = genusCol >= 0 ? plantosSafeStr_(row[genusCol]).trim() : '';
+    var taxon = taxonCol >= 0 ? plantosSafeStr_(row[taxonCol]).trim() : '';
+    var primary = nn || [genus, taxon].filter(Boolean).join(' ') || uid;
+    var lastProg = progCol >= 0 ? plantosAsDate_(row[progCol]) : null;
+    var daysSince = null;
+    if (lastProg) {
+      daysSince = Math.floor((now.getTime() - lastProg.getTime()) / (24 * 3600 * 1000));
+      if (daysSince < 14) continue; // not due yet
+    } else {
+      // Never had a progress update — check if plant is old enough (> 14 days)
+      var bd = birthdayCol >= 0 ? plantosAsDate_(row[birthdayCol]) : null;
+      if (bd) {
+        daysSince = Math.floor((now.getTime() - bd.getTime()) / (24 * 3600 * 1000));
+        if (daysSince < 14) continue;
+      } else {
+        daysSince = 999; // unknown age, show as due
+      }
+    }
+    result.push({ uid: uid, primary: primary, lastUpdate: lastProg ? plantosFmtDate_(lastProg) : null, daysSince: daysSince });
+  }
+  result.sort(function(a, b) { return (b.daysSince || 0) - (a.daysSince || 0); });
+  return result;
 }
 
 /* ===================== BATCH CREATE ===================== */

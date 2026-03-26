@@ -21,9 +21,10 @@ function plantosHome() {
   const lastWateredCol = plantosCol_(hmap, H.LAST_WATERED), everyDaysCol = plantosColMulti_(hmap, H.WATER_EVERY_DAYS, H.WATER_EVERY_DAYS_ALT); // FIX #14
   const birthdayCol = plantosCol_(hmap, H.BIRTHDAY), lastFertCol = plantosCol_(hmap, H.LAST_FERTILIZED);
   const fertEveryCol = plantosCol_(hmap, H.FERT_EVERY_DAYS);
+  const lastProgCol = plantosCol_(hmap, H.LAST_PROGRESS_UPDATE);
   const now = plantosNow_(), tz = Session.getScriptTimeZone();
   const today = Utilities.formatDate(now, tz, 'MM/dd');
-  const dueNow = [], upcoming = [], fertDueNow = [], fertUpcoming = [], bothDueNow = [], bothUpcoming = [], birthdays = [];
+  const dueNow = [], upcoming = [], fertDueNow = [], fertUpcoming = [], bothDueNow = [], bothUpcoming = [], birthdays = [], progressDue = [];
   let totalCount = 0;
   for (let r = 1; r < values.length; r++) {
     const row = values[r];
@@ -65,10 +66,24 @@ function plantosHome() {
     if (fertBucket === 'upcoming') fertUpcoming.push({ uid, primary, due: fertDue });
     if (waterBucket === 'now' && fertBucket === 'now') bothDueNow.push({ uid, primary, due: waterDue, fertDue });
     else if ((waterBucket === 'now' || waterBucket === 'upcoming') && (fertBucket === 'now' || fertBucket === 'upcoming')) bothUpcoming.push({ uid, primary, due: waterDue, fertDue });
+    // Progress update check (every 14 days)
+    if (lastProgCol >= 0) {
+      const lp = plantosAsDate_(row[lastProgCol]);
+      if (lp) {
+        const progDays = Math.floor((now.getTime() - lp.getTime()) / (24 * 3600 * 1000));
+        if (progDays >= 14) progressDue.push({ uid, primary, daysSince: progDays });
+      } else {
+        // Never had update — check if plant old enough
+        const bd = birthdayCol >= 0 ? plantosAsDate_(row[birthdayCol]) : null;
+        const age = bd ? Math.floor((now.getTime() - bd.getTime()) / (24 * 3600 * 1000)) : 999;
+        if (age >= 14) progressDue.push({ uid, primary, daysSince: age });
+      }
+    }
   }
   const byDue = (a, b) => String(a.due || '').localeCompare(String(b.due || ''));
   [dueNow, upcoming, fertDueNow, fertUpcoming, bothDueNow, bothUpcoming].forEach(a => a.sort(byDue));
-  return { dueNow, upcoming, fertDueNow, fertUpcoming, bothDueNow, bothUpcoming, birthdays, totalCount };
+  progressDue.sort(function(a, b) { return (b.daysSince || 0) - (a.daysSince || 0); });
+  return { dueNow, upcoming, fertDueNow, fertUpcoming, bothDueNow, bothUpcoming, birthdays, totalCount, progressDue };
 }
 
 /* ===================== FIX #5: Case-insensitive location matching ===================== */

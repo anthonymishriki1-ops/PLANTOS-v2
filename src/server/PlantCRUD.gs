@@ -66,6 +66,7 @@ function plantosUpdatePlant(uid, patch) {
     infraRank:         H.INFRA_RANK,       // FIX #15
     infraEpithet:      H.INFRA_EPITHET,    // FIX #15
     lastRepotted:      H.LAST_REPOTTED,    // FIX #15
+    purchasePrice:     H.PURCHASE_PRICE,
   };
 
   // FIX #14: waterEveryDays needs multi-header lookup since sheet may use either name
@@ -125,6 +126,7 @@ function plantosCreatePlant(payload) {
   setIf(H.POT_SHAPE,        payload.potShape || '');       // FIX #12
   setIfMulti(payload.waterEveryDays || payload.everyDays || '', H.WATER_EVERY_DAYS, H.WATER_EVERY_DAYS_ALT); // FIX #14
   setIf(H.FERT_EVERY_DAYS,  payload.fertEveryDays || payload.fertilizeEveryDays || '');
+  setIf(H.PURCHASE_PRICE,   payload.purchasePrice || '');
   sh.appendRow(row);
   return { ok: true, uid };
 }
@@ -445,6 +447,7 @@ function plantosRowToPlant_(hmap, row) {
   const hybridNote   = plantosGetByHeader_(hmap, row, H.HYBRID_NOTE);    // FIX #15
   const infraRank    = plantosGetByHeader_(hmap, row, H.INFRA_RANK);     // FIX #15
   const infraEpithet = plantosGetByHeader_(hmap, row, H.INFRA_EPITHET);  // FIX #15
+  const purchasePrice = plantosGetByHeader_(hmap, row, H.PURCHASE_PRICE);
 
   const genusStr = String(genus || '').trim();
   const taxonStr = String(taxon || '').trim();
@@ -505,6 +508,7 @@ function plantosRowToPlant_(hmap, row) {
     hybridNote:    hybridNote   || '',   // FIX #15
     infraRank:     infraRank    || '',   // FIX #15
     infraEpithet:  infraEpithet || '',   // FIX #15
+    purchasePrice: purchasePrice || '',
   };
 }
 

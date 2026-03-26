@@ -4985,13 +4985,15 @@ function PlantDataProvider({ children }) {
             if (!plant)
                 return Promise.resolve({ ok: false });
             const today = demoIso_(new Date());
-            const archived = Object.assign(Object.assign(Object.assign({}, plant), { status: type, causeOfDeath: type === 'deceased' ? (cause || null) : null, causeOfDeathDetail: type === 'deceased' ? (causeDetail || null) : null, deathDate: type === 'deceased' ? today : null, rehomeDate: type === 'rehomed' ? today : null, passportEnabled: type === 'rehomed' }), (extraFields || {}));
+            const archived = Object.assign(Object.assign(Object.assign({}, plant), { status: type, causeOfDeath: type === 'deceased' ? (cause || null) : null, causeOfDeathDetail: type === 'deceased' ? (causeDetail || null) : null, deathDate: type === 'deceased' ? today : null, rehomeDate: type === 'rehomed' ? today : null, soldDate: type === 'sold' ? today : null, passportEnabled: type === 'rehomed' }), (extraFields || {}));
             setDemoArchive(prev => [archived, ...(prev || [])]);
             setDemoPlants(prev => (prev || []).filter(p => String(p.uid) !== String(uid)));
             const logMsg = type === 'deceased'
                 ? `Moved to compost bin. Cause: ${cause || 'Unknown'}`
+                : type === 'sold'
+                ? `Sold. ${causeDetail || ''}`.trim()
                 : `Rehomed. ${causeDetail || ''}`.trim();
-            demoPushLog_(uid, type === 'deceased' ? 'DECEASED' : 'REHOMED', logMsg);
+            demoPushLog_(uid, type === 'deceased' ? 'DECEASED' : type === 'sold' ? 'SOLD' : 'REHOMED', logMsg);
             return Promise.resolve({ ok: true });
         }
         return gasCall('plantosArchivePlant', uid, type, cause, causeDetail);
@@ -7502,6 +7504,7 @@ function AddScreen() {
     const [potSize, setPotSize] = useState('');
     const [waterEveryDays, setWaterEveryDays] = useState('');
     const [fertilizeEveryDays, setFertilizeEveryDays] = useState('');
+    const [purchasePrice, setPurchasePrice] = useState('');
     const [showOptional, setShowOptional] = useState(false);
     const [status, setStatus] = useState(null);
     const [nickname, setNickname] = useState('');
@@ -7557,6 +7560,7 @@ function AddScreen() {
                 potSize: String(potSize || '').trim(),
                 everyDays: String(waterEveryDays || '').trim(),
                 fertilizeEveryDays: String(fertilizeEveryDays || '').trim(),
+                purchasePrice: String(purchasePrice || '').trim(),
             };
             let res; try { res = await createPlant(payload); } catch(e) { setStatus({ type: 'error', msg: 'GAS error: ' + (e&&e.message||String(e)) }); return; }
             const uid = res && res.uid ? String(res.uid) : '';
@@ -7811,7 +7815,10 @@ function AddScreen() {
                             ['2"','3"','4"','5"','6"','7"','8"','10"','12"','14"','16"'].map(s => React.createElement("option", { key: s, value: s }, s))))),
                 React.createElement("div", null,
                     React.createElement("div", { style: Object.assign({}, pxS, { fontSize: '14px', fontWeight: 800, color: theme.txtS }) }, "DOB / Acquired"),
-                    React.createElement("input", { type: "date", value: birthday, onChange: e => setBirthday(e.target.value), className: "mt-1 w-full border-4 px-2 py-1.5 input-depth", style: Object.assign({}, pxS, { fontSize: '13px', color: theme.txtP, borderColor: theme.cardBorder, background: theme.cardBg }) }))
+                    React.createElement("input", { type: "date", value: birthday, onChange: e => setBirthday(e.target.value), className: "mt-1 w-full border-4 px-2 py-1.5 input-depth", style: Object.assign({}, pxS, { fontSize: '13px', color: theme.txtP, borderColor: theme.cardBorder, background: theme.cardBg }) })),
+                React.createElement("div", null,
+                    React.createElement("div", { style: Object.assign({}, pxS, { fontSize: '14px', fontWeight: 800, color: theme.txtS }) }, "Purchase Price ($)"),
+                    React.createElement("input", { type: "text", inputMode: "decimal", value: purchasePrice, onChange: e => setPurchasePrice(e.target.value.replace(/[^0-9.]/g, '')), placeholder: "e.g. 25.00", className: "mt-1 w-full border-4 px-2 py-1.5 input-depth", style: Object.assign({}, pxS, { fontSize: '13px', color: theme.txtP, borderColor: theme.cardBorder, background: theme.cardBg }) }))
             ),
             !isBatch && (React.createElement(React.Fragment, null,
                 React.createElement("div", { className: "mb-3" },
@@ -8327,6 +8334,7 @@ function MyPlantsScreen({ openTab, prefill }) {
             nickname: p.nickname || '',
             location: p.location || '',
             potSize: p.potSize || '',
+            purchasePrice: p.purchasePrice || '',
             substrate: p.substrate || p.medium || '',
             genus: genus,
             taxon: p.species || p.taxon || '',
@@ -8362,6 +8370,7 @@ function MyPlantsScreen({ openTab, prefill }) {
                 nickname:       String(edit.nickname || '').trim(),
                 location:       String(edit.location || '').trim(),
                 potSize:        String(edit.potSize || '').trim(),
+                purchasePrice:  String(edit.purchasePrice || '').trim(),
                 substrate:      String(edit.substrate || '').trim(),
                 birthday:       String(edit.birthday || '').trim(),
                 waterEveryDays: String(edit.everyDays || '').trim(),
@@ -8801,6 +8810,9 @@ function MyPlantsScreen({ openTab, prefill }) {
                         React.createElement("div", { className: "mb-2" },
                             React.createElement("div", { style: Object.assign({}, pxS, { fontSize: '13px', fontWeight: 800, color: theme.txtS }) }, "Birthday / Acquired"),
                             React.createElement("input", { type: "date", value: edit.birthday || '', onChange: e => setEdit(prev => Object.assign({}, prev, { birthday: e.target.value })), className: "w-full border-4 px-2 py-1.5 mt-1 input-depth", style: Object.assign({}, pxS, { fontSize: '13px', color: theme.txtP, borderColor: theme.cardBorder, background: theme.cardBg }) })),
+                        React.createElement("div", { className: "mb-2" },
+                            React.createElement("div", { style: Object.assign({}, pxS, { fontSize: '13px', fontWeight: 800, color: theme.txtS }) }, "Purchase Price ($)"),
+                            React.createElement("input", { type: "text", inputMode: "decimal", value: edit.purchasePrice || '', onChange: e => setEdit(prev => Object.assign({}, prev, { purchasePrice: e.target.value.replace(/[^0-9.]/g, '') })), placeholder: "e.g. 25.00", className: "w-full border-4 px-2 py-1.5 mt-1 input-depth", style: Object.assign({}, pxS, { fontSize: '13px', color: theme.txtP, borderColor: theme.cardBorder, background: theme.cardBg }) })),
                         React.createElement("div", { id: 'sched-section-' + editUid, style: { display: 'flex', alignItems: 'center', gap: 6, margin: '10px 0 8px' } },
                             React.createElement("div", { style: { height: 2, flex: 1, background: theme.sep, opacity: 0.4 } }),
                             React.createElement("span", { style: Object.assign({}, pxS, { fontSize: '10px', fontWeight: 900, color: theme.txtS, letterSpacing: '0.08em', whiteSpace: 'nowrap' }) }, "\uD83D\uDCA7 WATERING & FERTILIZING"),
@@ -10926,6 +10938,7 @@ function PlantScreen({ uid }) {
     const [editInfraRank, setEditInfraRank] = useState('');
     const [editInfraEpithet, setEditInfraEpithet] = useState('');
     const [editNickname, setEditNickname] = useState('');
+    const [editPurchasePrice, setEditPurchasePrice] = useState('');
     const [logNotes, setLogNotes] = useState('');
     const [logWater, setLogWater] = useState(false);
     const [logFert, setLogFert] = useState(false);
@@ -11196,6 +11209,7 @@ function PlantScreen({ uid }) {
         setEditInfraRank(p.infraRank || '');
         setEditInfraEpithet(p.infraEpithet || '');
         setEditNickname(p.nickname || '');
+        setEditPurchasePrice(p.purchasePrice || '');
         setAutofillStatus(null);
         setAutofillPreview(null);
         console.log('[PlantOS] openEdit: setting editOpen=true');
@@ -11328,6 +11342,7 @@ function PlantScreen({ uid }) {
                 cultivar: editCultivar, hybridNote: editHybridNote, potShape: editPotShape,
                 infraRank: editInfraRank, infraEpithet: editInfraEpithet,
                 nickname: editNickname,
+                purchasePrice: editPurchasePrice,
                 recomputeDue: true
             };
             await updatePlant(plant.uid, editPatch);
@@ -11800,17 +11815,17 @@ return (React.createElement("div", { className: `flex flex-col ${isSmall ? 'p-3'
                         position: 'fixed', inset: 0,
                         zIndex: 999,
                         background: 'rgba(0,0,0,0.55)',
-                        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+                        display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+                        overflowY: 'auto', padding: '20px 0',
                     },
                     onClick: function(e) { if (e.target === e.currentTarget) setRepotOpen(false); }
                 },
                     React.createElement("div", { style: {
                         width: '100%', maxWidth: 560,
-                        maxHeight: '80vh',
+                        maxHeight: '92vh',
                         overflowY: 'auto', WebkitOverflowScrolling: 'touch',
                         background: theme.cardBg,
                         border: `4px solid ${theme.cardBorder}`,
-                        borderBottom: 'none',
                         padding: 20,
                     }},
                         React.createElement("div", { style: { fontFamily: "'Press Start 2P',cursive", fontSize: '12px', color: theme.txtP, marginBottom: 14 } }, React.createElement('span', { style: { fontFamily: "'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif" } }, '\uD83E\uDEB4'), ' REPOT'),
@@ -11835,7 +11850,8 @@ return (React.createElement("div", { className: `flex flex-col ${isSmall ? 'p-3'
                         position: 'fixed', inset: 0,
                         zIndex: 9999,
                         background: 'rgba(0,0,0,0.55)',
-                        display: 'flex', alignItems: 'flex-end', justifyContent: 'center',
+                        display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+                        overflowY: 'auto', padding: '20px 0',
                     },
                     onClick: function(e) { if (e.target === e.currentTarget) setEditOpen(false); }
                 },
@@ -11845,9 +11861,8 @@ return (React.createElement("div", { className: `flex flex-col ${isSmall ? 'p-3'
                         overflowY: 'auto', WebkitOverflowScrolling: 'touch',
                         background: theme.cardBg,
                         border: '4px solid ' + theme.cardBorder,
-                        borderBottom: 'none',
                         padding: 16,
-                        boxShadow: '0 -4px 0 ' + theme.cardBorder,
+                        boxShadow: '0 4px 0 ' + theme.cardBorder,
                     }},
                     React.createElement("div", { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 } },
                         React.createElement("div", { style: { fontFamily: "'Press Start 2P',cursive", fontSize: '14px', color: theme.txtP } }, "EDIT DETAILS"),
@@ -12033,6 +12048,9 @@ return (React.createElement("div", { className: `flex flex-col ${isSmall ? 'p-3'
                             React.createElement("select", { value: editPotShape, onChange: e => setEditPotShape(e.target.value), className: "w-full border-4 px-3 py-2 mt-1", style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', borderColor: theme.cardBorder, color: theme.txtP, background: theme.rowBg }) },
                                 React.createElement("option", { value: "" }, "\u2014 Not set \u2014"),
                                 POT_SHAPE_NAMES.map(s => React.createElement("option", { key: s, value: s }, s)))),
+                        React.createElement("div", null,
+                            React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtS, fontWeight: 800 }) }, "Purchase Price ($)"),
+                            React.createElement("input", { type: "text", inputMode: "decimal", value: editPurchasePrice, onChange: e => setEditPurchasePrice(e.target.value.replace(/[^0-9.]/g, '')), placeholder: "e.g. 25.00", className: "w-full border-4 px-3 py-2 mt-1 input-depth", style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', borderColor: theme.cardBorder, color: theme.txtP, background: theme.rowBg }) })),
                         React.createElement("div", { className: "flex gap-2 pt-1" },
                             React.createElement(PlantButton, { block: false, onClick: submitEdit }, "Save Changes"),
                             React.createElement(PlantButton, { block: false, variant: "ghost", onClick: () => setEditOpen(false) }, "Cancel"))))),
@@ -14303,26 +14321,35 @@ function CompostModal({ plant, onClose, onDone }) {
     const { archivePlant } = usePlantData();
     const theme = useTheme();
     const px8S = { fontFamily: "'Press Start 2P', cursive", fontSize: '14px' };
-    const [step, setStep] = useState('type'); // type ΓåÆ cause_cat ΓåÆ cause_option ΓåÆ confirm
-    const [type, setType] = useState(null); // 'deceased' | 'rehomed'
+    const [step, setStep] = useState('type'); // type → cause_cat → cause_option → sold_form → confirm
+    const [type, setType] = useState(null); // 'deceased' | 'rehomed' | 'sold'
     const [causeCat, setCauseCat] = useState(null);
     const [cause, setCause] = useState(null);
     const [detail, setDetail] = useState('');
     const [saving, setSaving] = useState(false);
+    const [soldPrice, setSoldPrice] = useState('');
+    const [soldDate, setSoldDate] = useState(new Date().toISOString().slice(0, 10));
+    const [soldNotes, setSoldNotes] = useState('');
     async function handleConfirm() {
         setSaving(true);
-        await archivePlant(plant.uid, type, cause, detail);
+        if (type === 'sold') {
+            var soldDetail = ['Price sold: $' + (soldPrice || '0'), 'Date sold: ' + (soldDate || 'N/A'), soldNotes ? 'Notes: ' + soldNotes : ''].filter(Boolean).join(' | ');
+            await archivePlant(plant.uid, 'sold', 'Sold', soldDetail);
+        } else {
+            await archivePlant(plant.uid, type, cause, detail);
+        }
         setSaving(false);
         onDone();
     }
     const btnStyle = (active, color) => (Object.assign(Object.assign({}, pxS), { fontSize: '13px', fontWeight: 900, padding: '10px 14px', width: '100%', border: `3px solid ${active ? color : theme.rowBorder}`, background: active ? color : theme.rowBg, color: active ? '#fff' : theme.txtP, cursor: 'pointer', marginBottom: 6, boxShadow: active ? `0 3px 0 ${color}aa` : `0 3px 0 ${theme.rowBorder}`, textAlign: 'left' }));
+    var typeColor = type === 'deceased' ? '#c0392b' : type === 'sold' ? '#2980b9' : '#27ae60';
     return (React.createElement("div", { style: {
             position: 'fixed', inset: 0, zIndex: 999,
-            background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16,
+            background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '20px 16px', overflowY: 'auto',
         } },
         React.createElement("div", { style: {
                 background: theme.cardBg, border: `4px solid ${theme.cardBorder}`,
-                padding: 20, maxWidth: 380, width: '100%', maxHeight: '85vh', overflowY: 'auto',
+                padding: 20, maxWidth: 380, width: '100%', maxHeight: '92vh', overflowY: 'auto',
                 boxShadow: `6px 6px 0 ${theme.cardBorder}`,
             } },
             React.createElement("div", { style: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 } },
@@ -14332,7 +14359,8 @@ function CompostModal({ plant, onClose, onDone }) {
             step === 'type' && (React.createElement(React.Fragment, null,
                 React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtS, marginBottom: 10 }) }, "What happened to this plant?"),
                 React.createElement("button", { type: "button", style: btnStyle(type === 'deceased', '#c0392b'), onClick: () => { setType('deceased'); setStep('cause_cat'); } }, "\uD83E\uDEA6 Compost Bin \u2014 it didn't make it"),
-                React.createElement("button", { type: "button", style: btnStyle(type === 'rehomed', '#27ae60'), onClick: () => { setType('rehomed'); setStep('confirm'); } }, "\uD83C\uDFE0 Given Away \u2014 rehomed to a new home"))),
+                React.createElement("button", { type: "button", style: btnStyle(type === 'rehomed', '#27ae60'), onClick: () => { setType('rehomed'); setStep('confirm'); } }, "\uD83C\uDFE0 Given Away \u2014 rehomed to a new home"),
+                React.createElement("button", { type: "button", style: btnStyle(type === 'sold', '#2980b9'), onClick: () => { setType('sold'); setStep('sold_form'); } }, "\uD83D\uDCB0 Sold \u2014 sold this plant"))),
             step === 'cause_cat' && (React.createElement(React.Fragment, null,
                 React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtS, marginBottom: 10 }) }, "What was the main cause?"),
                 Object.entries(DEATH_CAUSES).map(([key, cat]) => (React.createElement("button", { key: key, type: "button", style: btnStyle(causeCat === key, cat.color), onClick: () => { setCauseCat(key); setCause(null); setStep('cause_option'); } }, cat.label))),
@@ -14343,10 +14371,25 @@ function CompostModal({ plant, onClose, onDone }) {
                     " \u2014 which specifically?"),
                 DEATH_CAUSES[causeCat].options.map(opt => (React.createElement("button", { key: opt, type: "button", style: btnStyle(cause === opt, DEATH_CAUSES[causeCat].color), onClick: () => { setCause(opt); setStep('confirm'); } }, opt))),
                 React.createElement("button", { type: "button", style: Object.assign(Object.assign({}, pxS), { fontSize: '12px', color: theme.txtS, background: 'none', border: 'none', cursor: 'pointer', marginTop: 4 }), onClick: () => setStep('cause_cat') }, "\< Back"))),
+            step === 'sold_form' && (React.createElement(React.Fragment, null,
+                React.createElement("div", { style: { marginBottom: 12, padding: '8px 12px', border: '2px solid #2980b9', background: '#eaf2fa' } },
+                    React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '12px', fontWeight: 900, color: '#2980b9', marginBottom: 4 }) }, "\uD83D\uDCB0 Sold Details")),
+                React.createElement("div", { style: { marginBottom: 10 } },
+                    React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtS, fontWeight: 800, marginBottom: 4 }) }, "Price Sold ($)"),
+                    React.createElement("input", { type: "text", inputMode: "decimal", value: soldPrice, onChange: e => setSoldPrice(e.target.value.replace(/[^0-9.]/g, '')), placeholder: "e.g. 50.00", style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', width: '100%', border: `3px solid ${theme.cardBorder}`, padding: '8px', background: theme.rowBg, color: theme.txtP }) })),
+                React.createElement("div", { style: { marginBottom: 10 } },
+                    React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtS, fontWeight: 800, marginBottom: 4 }) }, "Date Sold"),
+                    React.createElement("input", { type: "date", value: soldDate, onChange: e => setSoldDate(e.target.value), style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', width: '100%', border: `3px solid ${theme.cardBorder}`, padding: '8px', background: theme.rowBg, color: theme.txtP }) })),
+                React.createElement("div", { style: { marginBottom: 12 } },
+                    React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtS, fontWeight: 800, marginBottom: 4 }) }, "Notes (optional)"),
+                    React.createElement("textarea", { value: soldNotes, onChange: e => setSoldNotes(e.target.value), rows: 3, placeholder: "e.g. Sold to a collector on Etsy...", style: Object.assign(Object.assign({}, pxS), { fontSize: '12px', width: '100%', border: `3px solid ${theme.cardBorder}`, padding: '8px', resize: 'none', background: theme.rowBg, color: theme.txtP }) })),
+                React.createElement("div", { style: { display: 'flex', gap: 8 } },
+                    React.createElement("button", { type: "button", onClick: handleConfirm, disabled: saving, style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', fontWeight: 900, flex: 1, padding: '12px', border: '3px solid #2980b9', background: '#2980b9', color: '#fff', cursor: 'pointer', boxShadow: '0 3px 0 #1a5276' }) }, saving ? '...' : '\uD83D\uDCB0 Confirm Sale'),
+                    React.createElement("button", { type: "button", onClick: () => setStep('type'), style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', color: theme.txtS, background: 'none', border: `2px solid ${theme.rowBorder}`, padding: '12px 16px', cursor: 'pointer' }) }, "\< Back")))),
             step === 'confirm' && (React.createElement(React.Fragment, null,
-                React.createElement("div", { style: { marginBottom: 12, padding: '8px 12px', border: `2px solid ${type === 'deceased' ? '#c0392b' : '#27ae60'}`,
+                React.createElement("div", { style: { marginBottom: 12, padding: '8px 12px', border: `2px solid ${typeColor}`,
                         background: type === 'deceased' ? '#fdf0ee' : '#f0fdf4' } },
-                    React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '12px', fontWeight: 900, color: type === 'deceased' ? '#c0392b' : '#27ae60', marginBottom: 4 }) }, type === 'deceased' ? '🪦 Moving to Compost Bin' : '🏠 Rehoming this plant'),
+                    React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '12px', fontWeight: 900, color: typeColor, marginBottom: 4 }) }, type === 'deceased' ? '🪦 Moving to Compost Bin' : '🏠 Rehoming this plant'),
                     cause && React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: '#333' }) },
                         "Cause: ",
                         React.createElement("strong", null, cause)),
@@ -14357,7 +14400,7 @@ function CompostModal({ plant, onClose, onDone }) {
                     React.createElement("div", { style: Object.assign(Object.assign({}, pxS), { fontSize: '14px', color: theme.txtS, fontWeight: 800, marginBottom: 4 }) }, type === 'deceased' ? 'What happened? (optional)' : 'Notes for the new owner (optional)'),
                     React.createElement("textarea", { value: detail, onChange: e => setDetail(e.target.value), rows: 3, placeholder: type === 'deceased' ? 'e.g. Kept too wet over winter...' : 'e.g. Loves bright indirect light, water weekly...', style: Object.assign(Object.assign({}, pxS), { fontSize: '12px', width: '100%', border: `3px solid ${theme.cardBorder}`, padding: '8px', resize: 'none', background: theme.rowBg, color: theme.txtP }) })),
                 React.createElement("div", { style: { display: 'flex', gap: 8 } },
-                    React.createElement("button", { type: "button", onClick: handleConfirm, disabled: saving, style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', fontWeight: 900, flex: 1, padding: '12px', border: `3px solid ${type === 'deceased' ? '#c0392b' : '#27ae60'}`, background: type === 'deceased' ? '#c0392b' : '#27ae60', color: '#fff', cursor: 'pointer', boxShadow: `0 3px 0 ${type === 'deceased' ? '#922b21' : '#1e8449'}` }) }, saving ? '...' : type === 'deceased' ? '🪦 Confirm' : '🏠 Confirm Rehome'),
+                    React.createElement("button", { type: "button", onClick: handleConfirm, disabled: saving, style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', fontWeight: 900, flex: 1, padding: '12px', border: `3px solid ${typeColor}`, background: typeColor, color: '#fff', cursor: 'pointer', boxShadow: `0 3px 0 ${type === 'deceased' ? '#922b21' : '#1e8449'}` }) }, saving ? '...' : type === 'deceased' ? '🪦 Confirm' : '🏠 Confirm Rehome'),
                     React.createElement("button", { type: "button", onClick: () => setStep(type === 'deceased' ? 'cause_option' : 'type'), style: Object.assign(Object.assign({}, pxS), { fontSize: '13px', color: theme.txtS, background: 'none', border: `2px solid ${theme.rowBorder}`, padding: '12px 16px', cursor: 'pointer' }) }, "\< Back")))))));
 }
 function PhyloScreen({ inline }) {
